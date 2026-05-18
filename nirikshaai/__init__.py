@@ -68,6 +68,16 @@ from __future__ import annotations
 from nirikshaai._otel import _configure_otel
 from nirikshaai.eval import submit_eval, submit_evals_batch
 from nirikshaai.prompt import get_prompt, list_prompts
+from nirikshaai.span import (
+    RAGChunk,
+    ToolCall,
+    record_conversation,
+    record_rag_chunk,
+    record_tool_call,
+)
+from nirikshaai.pii import redact_pii
+from nirikshaai.baggage import detach_baggage, get_baggage, set_baggage
+from nirikshaai.serverless import with_flush
 
 __version__ = "0.2.0"  # keep in sync with pyproject.toml
 
@@ -76,10 +86,26 @@ __all__ = [
     "init",
     "is_initialized",
     "flush",
+    # eval
     "submit_eval",
     "submit_evals_batch",
+    # prompt
     "get_prompt",
     "list_prompts",
+    # span enrichment
+    "record_conversation",
+    "RAGChunk",
+    "record_rag_chunk",
+    "ToolCall",
+    "record_tool_call",
+    # pii
+    "redact_pii",
+    # baggage
+    "set_baggage",
+    "get_baggage",
+    "detach_baggage",
+    # serverless
+    "with_flush",
 ]
 
 _initialized = False
