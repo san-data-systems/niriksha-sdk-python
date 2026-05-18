@@ -78,6 +78,7 @@ from nirikshaai.span import (
 from nirikshaai.pii import redact_pii
 from nirikshaai.baggage import detach_baggage, get_baggage, set_baggage
 from nirikshaai.serverless import with_flush
+from nirikshaai.middleware import NirikshaWSGIMiddleware, NirikshaASGIMiddleware
 
 __version__ = "0.2.0"  # keep in sync with pyproject.toml
 
@@ -106,6 +107,9 @@ __all__ = [
     "detach_baggage",
     # serverless
     "with_flush",
+    # middleware
+    "NirikshaWSGIMiddleware",
+    "NirikshaASGIMiddleware",
 ]
 
 _initialized = False
@@ -121,6 +125,7 @@ def init(
     enable_logs: bool = True,
     enable_llm: bool = False,
     capture_prompts: bool = False,
+    sample_rate: float = 1.0,
     otlp_port: int = 4317,
     otlp_endpoint: str | None = None,
     insecure: bool = False,
@@ -142,6 +147,8 @@ def init(
         enable_llm:      Auto-instrument LLM libraries (default: False).
         capture_prompts: Capture llm.input/output.messages when enable_llm=True.
                          Keep False in production unless you have PII controls.
+        sample_rate:     Head-based trace sampling rate (0.0–1.0). Default: 1.0 (sample all).
+                         Use 0.1 to sample ~10% of traces.
         otlp_port:       OTLP gRPC port (default 4317). Ignored when otlp_endpoint is set.
         otlp_endpoint:   Override the gRPC OTLP address (``host:port``, no scheme).
                          Use when REST API and OTLP gateway are on different hosts.
@@ -172,6 +179,7 @@ def init(
         enable_logs=enable_logs,
         enable_llm=enable_llm,
         capture_prompts=capture_prompts,
+        sample_rate=sample_rate,
         otlp_port=otlp_port,
         otlp_endpoint=otlp_endpoint,
         insecure=insecure,

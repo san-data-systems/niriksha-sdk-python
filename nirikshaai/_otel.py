@@ -81,6 +81,7 @@ def _configure_otel(
     tls_skip_verify: bool,
     ca_cert_file: str | None,
     disable_instrumentations: list[str],
+    sample_rate: float = 1.0,
     sdk_version: str = "0.1.0",
 ) -> None:
     from opentelemetry import trace
@@ -136,8 +137,19 @@ def _configure_otel(
     })
 
     # ── Traces ────────────────────────────────────────────────────────────────
+    from opentelemetry.sdk.trace.sampling import (
+        TraceIdRatioBased, ParentBased, ALWAYS_ON, ALWAYS_OFF,
+    )
+
+    if sample_rate >= 1.0:
+        sampler = ALWAYS_ON
+    elif sample_rate <= 0.0:
+        sampler = ALWAYS_OFF
+    else:
+        sampler = ParentBased(TraceIdRatioBased(sample_rate))
+
     trace_exporter = OTLPSpanExporter(**_exporter_kwargs())
-    tp = TracerProvider(resource=resource)
+    tp = TracerProvider(resource=resource, sampler=sampler)
     tp.add_span_processor(BatchSpanProcessor(trace_exporter))
     trace.set_tracer_provider(tp)
 
