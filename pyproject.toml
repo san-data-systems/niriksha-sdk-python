@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "nirikshaai"
+version = "0.2.0"
+description = "NirikshaAI Python SDK — full-stack observability via OpenTelemetry"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+keywords = ["observability", "opentelemetry", "tracing", "metrics", "logs", "apm"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+]
+dependencies = [
+  # Core OTEL SDK — always required
+  "opentelemetry-sdk>=1.24",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.24",
+]
+
+[project.optional-dependencies]
+# Install all general instrumentations at once
+all = [
+  "opentelemetry-instrumentation-django>=0.45b0",
+  "opentelemetry-instrumentation-flask>=0.45b0",
+  "opentelemetry-instrumentation-fastapi>=0.45b0",
+  "opentelemetry-instrumentation-starlette>=0.45b0",
+  "opentelemetry-instrumentation-requests>=0.45b0",
+  "opentelemetry-instrumentation-urllib3>=0.45b0",
+  "opentelemetry-instrumentation-aiohttp-client>=0.45b0",
+  "opentelemetry-instrumentation-grpc>=0.45b0",
+  "opentelemetry-instrumentation-sqlalchemy>=0.45b0",
+  "opentelemetry-instrumentation-psycopg2>=0.45b0",
+  "opentelemetry-instrumentation-pymongo>=0.45b0",
+  "opentelemetry-instrumentation-redis>=0.45b0",
+  "opentelemetry-instrumentation-celery>=0.45b0",
+]
+# LLM-specific instrumentations (opt-in)
+llm = [
+  "opentelemetry-instrumentation-openai>=0.27b0",
+  "opentelemetry-instrumentation-anthropic>=0.27b0",
+  "opentelemetry-instrumentation-langchain>=0.27b0",
+]
+dev = ["pytest", "pytest-asyncio"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["nirikshaai*"]
