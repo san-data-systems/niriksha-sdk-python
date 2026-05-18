@@ -1,0 +1,4 @@
+nirikshaai
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+opentelemetry-instrumentation-fastapi>=0.45b0

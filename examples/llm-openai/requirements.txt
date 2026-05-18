@@ -1,0 +1,3 @@
+nirikshaai
+openai>=1.30.0
+opentelemetry-instrumentation-openai>=0.28.0
