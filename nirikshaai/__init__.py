@@ -69,8 +69,13 @@ from nirikshaai._otel import _configure_otel
 from nirikshaai.eval import submit_eval, submit_evals_batch
 from nirikshaai.prompt import get_prompt, list_prompts
 
+__version__ = "0.2.0"  # keep in sync with pyproject.toml
+
 __all__ = [
+    "__version__",
     "init",
+    "is_initialized",
+    "flush",
     "submit_eval",
     "submit_evals_batch",
     "get_prompt",
@@ -147,5 +152,23 @@ def init(
         tls_skip_verify=tls_skip_verify,
         ca_cert_file=ca_cert_file,
         disable_instrumentations=disable_instrumentations or [],
+        sdk_version=__version__,
     )
     _initialized = True
+
+
+def flush() -> None:
+    """Force-flush all pending spans, metrics, and log records.
+    Call before process exit in serverless / short-lived environments."""
+    from opentelemetry import trace, metrics
+    tp = trace.get_tracer_provider()
+    if hasattr(tp, "force_flush"):
+        tp.force_flush()
+    mp = metrics.get_meter_provider()
+    if hasattr(mp, "force_flush"):
+        mp.force_flush()
+
+
+def is_initialized() -> bool:
+    """Return True if nirikshaai.init() has been called."""
+    return _initialized

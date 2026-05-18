@@ -81,6 +81,7 @@ def _configure_otel(
     tls_skip_verify: bool,
     ca_cert_file: str | None,
     disable_instrumentations: list[str],
+    sdk_version: str = "0.1.0",
 ) -> None:
     from opentelemetry import trace
     from opentelemetry.sdk.resources import Resource, SERVICE_NAME
@@ -130,6 +131,8 @@ def _configure_otel(
         SERVICE_NAME: service_name,
         "deployment.environment": environment,
         "telemetry.sdk.name": "nirikshaai-python",
+        "telemetry.sdk.version": sdk_version,
+        "telemetry.sdk.language": "python",
     })
 
     # ── Traces ────────────────────────────────────────────────────────────────
