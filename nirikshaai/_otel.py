@@ -9,6 +9,30 @@ from typing import TYPE_CHECKING
 
 logger = logging.getLogger("nirikshaai")
 
+_QUOTA_KEYWORDS = ("ResourceExhausted", "data limit reached", "quota_exceeded")
+
+
+class _QuotaWarnHandler(logging.Handler):
+    """Intercepts OTEL SDK internal log records that indicate quota exceeded.
+
+    The standard OTEL SDK emits export errors at WARNING level to the
+    ``opentelemetry.*`` logger hierarchy. This handler re-emits them at
+    ERROR level via the ``nirikshaai`` logger so they appear in application
+    logs even when OTEL SDK internals are filtered out.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = record.getMessage()
+        if all(kw in msg for kw in ("ResourceExhausted", "data limit reached")):
+            logger.error(
+                "NirikshaAI: org data quota exceeded — telemetry is being dropped. "
+                "Contact your platform admin to increase the quota."
+            )
+
+
+_quota_handler = _QuotaWarnHandler()
+logging.getLogger("opentelemetry").addHandler(_quota_handler)
+
 # General web/infra instrumentations — auto-applied if the library is installed.
 # These cover any Python service (Django, Flask, FastAPI, databases, HTTP clients).
 _GENERAL_INSTRUMENTATIONS: dict[str, str] = {
