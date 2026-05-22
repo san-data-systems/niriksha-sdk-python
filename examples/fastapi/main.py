@@ -23,7 +23,7 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 nirikshaai.init(
     endpoint="https://app.niriksha.ai",
-    otlp_endpoint="ingest.niriksha.ai:4317",
+    otlp_endpoint="grpc-ingest.niriksha.ai:4317",
     api_key=os.environ["NIRIKSHA_API_KEY"],
     service_name="order-service",
     environment=os.getenv("APP_ENV", "production"),

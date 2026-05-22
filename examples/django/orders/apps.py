@@ -27,7 +27,7 @@ class OrdersConfig(AppConfig):
 
         nirikshaai.init(
             endpoint="https://app.niriksha.ai",
-            otlp_endpoint="ingest.niriksha.ai:4317",
+            otlp_endpoint="grpc-ingest.niriksha.ai:4317",
             api_key=api_key,
             service_name="django-order-service",
             environment=os.getenv("APP_ENV", "production"),
