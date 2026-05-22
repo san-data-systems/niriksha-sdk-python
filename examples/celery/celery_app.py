@@ -17,7 +17,7 @@ import nirikshaai
 
 nirikshaai.init(
     endpoint="https://app.niriksha.ai",
-    otlp_endpoint="grpc-ingest.niriksha.ai:4317",
+    otlp_endpoint="grpc-ingest.niriksha.ai:443",
     api_key=os.environ["NIRIKSHA_API_KEY"],
     service_name="celery-worker",
     environment=os.getenv("APP_ENV", "production"),

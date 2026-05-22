@@ -57,7 +57,7 @@ import nirikshaai
 
 nirikshaai.init(
     endpoint="https://app.niriksha.ai",
-    otlp_endpoint="grpc-ingest.niriksha.ai:4317",  # SaaS: OTLP gateway is separate from the REST API
+    otlp_endpoint="grpc-ingest.niriksha.ai:443",  # SaaS: OTLP gateway is separate from the REST API
     api_key="nai_...",
     service_name="my-service",
 )
@@ -112,7 +112,7 @@ All parameters are passed to `nirikshaai.init()`.
 | `enable_llm` | `bool` | `False` | Auto-instrument supported LLM client libraries (opt-in) |
 | `capture_prompts` | `bool` | `False` | Capture `llm.input/output.messages` span attributes (PII risk) |
 | `otlp_port` | `int` | `4317` | OTLP gRPC port. Ignored when `otlp_endpoint` is set. |
-| `otlp_endpoint` | `str` | `None` | Override the gRPC OTLP address (`host:port`, no scheme). SaaS: `grpc-ingest.niriksha.ai:4317` |
+| `otlp_endpoint` | `str` | `None` | Override the gRPC OTLP address (`host:port`, no scheme). SaaS: `grpc-ingest.niriksha.ai:443` |
 | `insecure` | `bool` | `False` | Send gRPC without TLS. Use when TLS is terminated at an ingress. |
 | `tls_skip_verify` | `bool` | `False` | Use TLS but skip server certificate validation. Dev/staging only. |
 | `ca_cert_file` | `str` | `None` | Path to a PEM CA certificate for verifying the gateway TLS cert. |

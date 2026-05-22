@@ -16,7 +16,7 @@ For SaaS, also set otlp_endpoint to the ingest host::
 
     nirikshaai.init(
         endpoint="https://app.niriksha.ai",
-        otlp_endpoint="grpc-ingest.niriksha.ai:4317",
+        otlp_endpoint="grpc-ingest.niriksha.ai:443",
         api_key="nai_...",
     )
 
@@ -152,7 +152,7 @@ def init(
         otlp_port:       OTLP gRPC port (default 4317). Ignored when otlp_endpoint is set.
         otlp_endpoint:   Override the gRPC OTLP address (``host:port``, no scheme).
                          Use when REST API and OTLP gateway are on different hosts.
-                         SaaS: ``"grpc-ingest.niriksha.ai:4317"``
+                         SaaS: ``"grpc-ingest.niriksha.ai:443"``
         insecure:        Send gRPC traffic without TLS. Use when TLS is terminated at an
                          ingress in front of the NirikshaAI gateway.
         tls_skip_verify: Use TLS but skip server certificate validation.
