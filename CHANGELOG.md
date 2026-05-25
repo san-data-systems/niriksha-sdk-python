@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `dev-release.yml` workflow — automatically publishes `0.x.y.devN` pre-release to PyPI on every merge to `main`
+- `RELEASE.md` — comprehensive versioning, branching, and release process guide
 - Internal `_logger.py` helper providing namespaced `nirikshaai.*` loggers
 - `ruff` linting and formatting configuration (replaces flake8/black/isort)
 - `mypy` type checking configuration
