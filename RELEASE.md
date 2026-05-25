@@ -160,27 +160,31 @@ Users install with `pip install --pre nirikshaai`.
 
 ## Required Secrets & Setup (One-time)
 
-### PyPI Trusted Publisher (recommended — no token needed)
-1. Go to [pypi.org/manage/account/publishing](https://pypi.org/manage/account/publishing/)
-2. Add a new trusted publisher:
-   - **Owner:** `san-data-systems`
-   - **Repository:** `niriksha-sdk-python`
-   - **Workflow filename:** `release.yml`
-   - **Environment:** `pypi`
-3. Add a second publisher for dev builds:
-   - Same repo, workflow `dev-release.yml`, environment `pypi-dev`
-4. Create the `pypi` and `pypi-dev` environments in GitHub → Settings → Environments
+> **Important:** All tokens and credentials below must be created using the **niriksha.ai product account** (`niriksha.ai` workspace / `nirikshaai` org), not a personal developer account. This keeps all niriksha product tokens separate from other San Data Systems products and allows any team member to manage releases.
 
-### Alternative: PyPI API Token
-If trusted publisher is not used:
-1. Go to [pypi.org/manage/account/token](https://pypi.org/manage/account/token/)
-2. Create a token scoped to `nirikshaai`
-3. Add to GitHub → Settings → Secrets → `PYPI_TOKEN`
-4. Update workflow: replace `pypa/gh-action-pypi-publish` with token-based publish
+### PyPI — Trusted Publisher (recommended, no token needed)
 
-### NVD API Key (speeds up OWASP scans)
-1. Register at [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key)
-2. Add as GitHub secret: `NVD_API_KEY`
+| Step | Action | URL |
+|------|--------|-----|
+| 1 | Sign in to PyPI with the **niriksha.ai project account** | [pypi.org/account/login](https://pypi.org/account/login/) |
+| 2 | Add Trusted Publisher for stable releases | [pypi.org/manage/project/nirikshaai/settings/publishing](https://pypi.org/manage/project/nirikshaai/settings/publishing/) |
+| 3 | Add Trusted Publisher for dev builds | Same page — second entry |
+| 4 | Create GitHub environments `pypi` and `pypi-dev` | [github.com/san-data-systems/niriksha-sdk-python/settings/environments](https://github.com/san-data-systems/niriksha-sdk-python/settings/environments) |
+
+**Trusted Publisher settings (both entries):**
+- Owner: `san-data-systems`
+- Repository: `niriksha-sdk-python`
+- Workflow: `release.yml` (for `pypi` env) or `dev-release.yml` (for `pypi-dev` env)
+- Environment: `pypi` / `pypi-dev`
+
+### NVD API Key (all SDKs, speeds up security scans)
+
+| Step | Action | URL |
+|------|--------|-----|
+| 1 | Request a free NVD API key using the **niriksha.ai product email** | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) |
+| 2 | Add to GitHub secrets as `NVD_API_KEY` | [github.com/san-data-systems/niriksha-sdk-python/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-python/settings/secrets/actions) |
+
+> The same `NVD_API_KEY` can be added to all four SDK repos.
 
 ---
 
