@@ -9,7 +9,9 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-logger = logging.getLogger("nirikshaai")
+from nirikshaai._logger import get_logger
+
+logger = get_logger("prompt")
 
 _base_url: str = ""
 _api_key: str = ""

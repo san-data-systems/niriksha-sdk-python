@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "enhance/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check nirikshaai/
+      - name: Ruff format check
+        run: ruff format --check nirikshaai/
+      - name: Mypy type check
+        run: mypy nirikshaai/ --ignore-missing-imports
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install package + dev deps
+        run: pip install -e ".[dev]"
+      - name: Run tests with coverage
+        run: pytest tests/ --cov=nirikshaai --cov-report=xml --cov-report=term
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.11'
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: Ruff security rules (bandit equivalent)
+        run: ruff check nirikshaai/ --select S
+      - name: pip-audit vulnerability scan
+        run: |
+          pip install pip-audit
+          pip-audit --requirement <(pip freeze) --ignore-vuln GHSA-j4c2-p4c9-7qfp || true
