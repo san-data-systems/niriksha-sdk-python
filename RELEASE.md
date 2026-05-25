@@ -1,6 +1,6 @@
 # Release Guide — nirikshaai (Python SDK)
 
-> Product: [niriksha.ai](https://niriksha.ai) · Company: [sandatasystem.ai](https://sandatasystem.ai)  
+> Product: [niriksha.ai](https://niriksha.ai)  
 > Maintainer: vbhadauriya@redcloudcomputing.com
 
 ---
