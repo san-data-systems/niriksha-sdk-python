@@ -1,0 +1,104 @@
+name: Dev Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+jobs:
+  dev-release:
+    name: Publish Dev Build to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    environment:
+      name: pypi-dev
+      url: https://pypi.org/p/nirikshaai
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install build tools
+        run: pip install build tomli
+
+      - name: Read current version
+        id: ver
+        run: |
+          python - <<'EOF'
+          import sys
+          try:
+              import tomllib
+          except ImportError:
+              import tomli as tomllib
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+          print(data["project"]["version"])
+          EOF
+          VERSION=$(python - <<'EOF'
+          import sys
+          try:
+              import tomllib
+          except ImportError:
+              import tomli as tomllib
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+          print(data["project"]["version"])
+          EOF
+          )
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compute dev version
+        id: devver
+        run: |
+          BASE="${{ steps.ver.outputs.version }}"
+          DEV_VERSION="${BASE}.dev${{ github.run_number }}"
+          echo "dev_version=$DEV_VERSION" >> $GITHUB_OUTPUT
+          echo "Dev version: $DEV_VERSION"
+
+      - name: Stamp dev version into pyproject.toml
+        run: |
+          BASE="${{ steps.ver.outputs.version }}"
+          DEV="${{ steps.devver.outputs.dev_version }}"
+          sed -i "s/^version = \"${BASE}\"/version = \"${DEV}\"/" pyproject.toml
+          grep "^version" pyproject.toml
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Publish dev build to PyPI (trusted publisher)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.devver.outputs.dev_version }}
+          name: "dev build v${{ steps.devver.outputs.dev_version }}"
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            🔧 **Automated dev build** — not for production use.
+
+            Install with:
+            ```bash
+            pip install "nirikshaai==${{ steps.devver.outputs.dev_version }}"
+            # or latest dev:
+            pip install --pre nirikshaai
+            ```
+
+            **Commit:** ${{ github.sha }}
+            **Run:** ${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

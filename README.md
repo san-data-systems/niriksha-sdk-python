@@ -1,8 +1,9 @@
 # NirikshaAI Python SDK
 
+[![CI](https://github.com/san-data-systems/niriksha-sdk-python/actions/workflows/ci.yml/badge.svg)](https://github.com/san-data-systems/niriksha-sdk-python/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/nirikshaai.svg)](https://pypi.org/project/nirikshaai/)
 [![Python versions](https://img.shields.io/pypi/pyversions/nirikshaai.svg)](https://pypi.org/project/nirikshaai/)
-[![License](https://img.shields.io/pypi/l/nirikshaai.svg)](https://github.com/san-data-systems/sdk-python/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 The official Python SDK for [NirikshaAI](https://nirikshaai.com) — AI-native observability for logs, metrics, traces, and LLM/agent telemetry.
 

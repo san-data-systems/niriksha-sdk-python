@@ -6,9 +6,9 @@ before recording any user-facing text as a span attribute or log body when
 
 Supported patterns (applied in order):
     1. Email addresses        → ``[REDACTED_EMAIL]``
-    2. US/CA phone numbers    → ``[REDACTED_PHONE]``
-    3. US Social Security     → ``[REDACTED_SSN]``
-    4. Credit card numbers    → ``[REDACTED_CC]``
+    2. Credit card numbers    → ``[REDACTED_CC]``
+    3. US/CA phone numbers    → ``[REDACTED_PHONE]``
+    4. US Social Security     → ``[REDACTED_SSN]``
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ _SSN_RE = re.compile(
 )
 
 _CC_RE = re.compile(
-    r"\b(?:\d[ \-]?){13,16}\b"
+    r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{0,4}\b"
 )
 
 
@@ -42,10 +42,10 @@ def redact_pii(s: str) -> str:
     Applies four substitutions in a fixed, deterministic order:
 
     1. Email addresses are replaced with ``[REDACTED_EMAIL]``.
-    2. Phone numbers (US/Canada format) are replaced with ``[REDACTED_PHONE]``.
-    3. US Social Security Numbers are replaced with ``[REDACTED_SSN]``.
-    4. Credit / debit card numbers (13–16 digit sequences, optional separators)
+    2. Credit / debit card numbers (16-digit sequences with optional separators)
        are replaced with ``[REDACTED_CC]``.
+    3. Phone numbers (US/Canada format) are replaced with ``[REDACTED_PHONE]``.
+    4. US Social Security Numbers are replaced with ``[REDACTED_SSN]``.
 
     Args:
         s: The input string that may contain PII.
@@ -55,7 +55,7 @@ def redact_pii(s: str) -> str:
         never mutated.
     """
     s = _EMAIL_RE.sub("[REDACTED_EMAIL]", s)
+    s = _CC_RE.sub("[REDACTED_CC]", s)
     s = _PHONE_RE.sub("[REDACTED_PHONE]", s)
     s = _SSN_RE.sub("[REDACTED_SSN]", s)
-    s = _CC_RE.sub("[REDACTED_CC]", s)
     return s
