@@ -42,12 +42,14 @@ def with_flush(fn: Callable) -> Callable:
         A wrapped callable with the same signature as *fn*.
     """
     if inspect.iscoroutinefunction(fn):
+
         @functools.wraps(fn)
         async def _async_wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return await fn(*args, **kwargs)
             finally:
                 import nirikshaai  # noqa: PLC0415 — lazy to avoid circular import
+
                 nirikshaai.flush()
 
         return _async_wrapper
@@ -58,6 +60,7 @@ def with_flush(fn: Callable) -> Callable:
             return fn(*args, **kwargs)
         finally:
             import nirikshaai  # noqa: PLC0415 — lazy to avoid circular import
+
             nirikshaai.flush()
 
     return _sync_wrapper

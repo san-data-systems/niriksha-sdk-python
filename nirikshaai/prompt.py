@@ -95,13 +95,15 @@ def get_prompt(
             last_exc = ValueError(f"NirikshaAI get_prompt failed {exc.code}: {body}")
             logger.debug(
                 "NirikshaAI get_prompt attempt %d failed %d, retrying",
-                attempt, exc.code,
+                attempt,
+                exc.code,
             )
         except Exception as exc:
             last_exc = exc
             logger.debug(
                 "NirikshaAI get_prompt attempt %d error: %s, retrying",
-                attempt, exc,
+                attempt,
+                exc,
             )
         if attempt < 3:
             time.sleep(attempt * 0.5)
@@ -128,13 +130,15 @@ def list_prompts() -> list[dict[str, Any]]:
             last_exc = ValueError(f"NirikshaAI list_prompts failed {exc.code}: {body}")
             logger.debug(
                 "NirikshaAI list_prompts attempt %d failed %d, retrying",
-                attempt, exc.code,
+                attempt,
+                exc.code,
             )
         except Exception as exc:
             last_exc = exc
             logger.debug(
                 "NirikshaAI list_prompts attempt %d error: %s, retrying",
-                attempt, exc,
+                attempt,
+                exc,
             )
         if attempt < 3:
             time.sleep(attempt * 0.5)
