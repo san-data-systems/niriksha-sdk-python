@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import logging
 import ssl
-from typing import TYPE_CHECKING
 
 from nirikshaai._logger import get_logger
 
@@ -111,10 +110,10 @@ def _configure_otel(
     sdk_version: str = "0.1.0",
 ) -> None:
     from opentelemetry import trace
-    from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
     # Derive gRPC address
     if otlp_endpoint:
@@ -169,7 +168,10 @@ def _configure_otel(
 
     # ── Traces ────────────────────────────────────────────────────────────────
     from opentelemetry.sdk.trace.sampling import (
-        TraceIdRatioBased, ParentBased, ALWAYS_ON, ALWAYS_OFF,
+        ALWAYS_OFF,
+        ALWAYS_ON,
+        ParentBased,
+        TraceIdRatioBased,
     )
 
     if sample_rate >= 1.0:
@@ -187,10 +189,10 @@ def _configure_otel(
     # ── Metrics ───────────────────────────────────────────────────────────────
     if enable_metrics:
         try:
+            from opentelemetry import metrics
+            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
             from opentelemetry.sdk.metrics import MeterProvider
             from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-            from opentelemetry import metrics
 
             metric_exporter = OTLPMetricExporter(**_exporter_kwargs())
             reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=60_000)
@@ -198,15 +200,15 @@ def _configure_otel(
             metrics.set_meter_provider(mp)
             logger.debug("NirikshaAI: metrics exporter configured")
         except ImportError:
-            logger.debug("NirikshaAI: metrics exporter not available (install opentelemetry-exporter-otlp-proto-grpc)")
+            logger.debug("NirikshaAI: metrics exporter not available (install opentelemetry-exporter-otlp-proto-grpc)")  # noqa: E501
 
     # ── Logs ──────────────────────────────────────────────────────────────────
     if enable_logs:
         try:
+            from opentelemetry import _logs
+            from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
             from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
             from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-            from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            from opentelemetry import _logs
 
             log_exporter = OTLPLogExporter(**_exporter_kwargs())
             lp = LoggerProvider(resource=resource)

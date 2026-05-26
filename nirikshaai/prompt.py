@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 import urllib.error
 import urllib.request
@@ -69,14 +68,14 @@ def get_prompt(
 
     last_exc: Exception | None = None
     for attempt in range(1, 4):
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # noqa: S310 — SDK makes HTTPS calls to niriksha.ai only
             url,
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json", "X-API-Key": _api_key},
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
                 raw = json.loads(resp.read())
                 data = raw.get("data", {})
                 result: dict[str, Any] = {
@@ -116,9 +115,9 @@ def list_prompts() -> list[dict[str, Any]]:
     url = f"{_base_url}/api/v1/sdk/prompts"
     last_exc: Exception | None = None
     for attempt in range(1, 4):
-        req = urllib.request.Request(url, headers={"X-API-Key": _api_key})
+        req = urllib.request.Request(url, headers={"X-API-Key": _api_key})  # noqa: S310
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
                 result = json.loads(resp.read())
                 return result.get("data", {}).get("prompts", [])
         except urllib.error.HTTPError as exc:

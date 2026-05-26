@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 import urllib.error
 import urllib.request
@@ -89,7 +88,7 @@ def submit_evals_batch(evals: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _post(url: str, payload: dict) -> dict[str, Any]:
     data = json.dumps(payload).encode()
-    req = urllib.request.Request(
+    req = urllib.request.Request(  # noqa: S310 — SDK makes HTTPS calls to niriksha.ai only
         url,
         data=data,
         headers={"Content-Type": "application/json", "X-API-Key": _api_key},
@@ -98,7 +97,7 @@ def _post(url: str, payload: dict) -> dict[str, Any]:
     last_error: dict[str, Any] = {}
     for attempt in range(1, 4):
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except urllib.error.HTTPError as exc:
             if exc.code < 500:

@@ -79,6 +79,9 @@ ignore = [
     "B008",  # FastAPI Depends() calls in function args
 ]
 
+[tool.ruff.lint.mccabe]
+max-complexity = 18  # SDK init functions are intentionally comprehensive
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "B"]
 "examples/**" = ["S", "B", "N"]
