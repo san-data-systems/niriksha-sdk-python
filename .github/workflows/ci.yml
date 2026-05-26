@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "enhance/**"]
+    branches: [main, "enhance/**", "fix/**"]
   pull_request:
     branches: [main]
 
@@ -26,11 +26,13 @@ jobs:
         run: mypy nirikshaai/ --ignore-missing-imports
 
   test:
-    name: Test (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.9", "3.11", "3.12"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -43,7 +45,7 @@ jobs:
         run: pytest tests/ --cov=nirikshaai --cov-report=xml --cov-report=term
       - name: Upload coverage
         uses: actions/upload-artifact@v4
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.11' && matrix.os == 'ubuntu-latest'
         with:
           name: coverage-report
           path: coverage.xml
@@ -64,4 +66,4 @@ jobs:
       - name: pip-audit vulnerability scan
         run: |
           pip install pip-audit
-          pip-audit --requirement <(pip freeze) --ignore-vuln GHSA-j4c2-p4c9-7qfp || true
+          pip-audit -r <(pip freeze) --fail-on-vuln

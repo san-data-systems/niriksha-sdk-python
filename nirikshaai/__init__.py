@@ -66,8 +66,12 @@ but opt-in::
 from __future__ import annotations
 
 from nirikshaai._otel import _configure_otel
+from nirikshaai.baggage import detach_baggage, get_baggage, set_baggage
 from nirikshaai.eval import submit_eval, submit_evals_batch
+from nirikshaai.middleware import NirikshaASGIMiddleware, NirikshaWSGIMiddleware
+from nirikshaai.pii import redact_pii
 from nirikshaai.prompt import get_prompt, list_prompts
+from nirikshaai.serverless import with_flush
 from nirikshaai.span import (
     RAGChunk,
     ToolCall,
@@ -75,10 +79,6 @@ from nirikshaai.span import (
     record_rag_chunk,
     record_tool_call,
 )
-from nirikshaai.pii import redact_pii
-from nirikshaai.baggage import detach_baggage, get_baggage, set_baggage
-from nirikshaai.serverless import with_flush
-from nirikshaai.middleware import NirikshaWSGIMiddleware, NirikshaASGIMiddleware
 
 __version__ = "0.0.1"  # keep in sync with pyproject.toml
 
@@ -165,7 +165,9 @@ def init(
     if _initialized:
         return
 
-    from nirikshaai import eval as _eval_mod, prompt as _prompt_mod
+    from nirikshaai import eval as _eval_mod
+    from nirikshaai import prompt as _prompt_mod
+
     base = endpoint.rstrip("/")
     _eval_mod._configure(base, api_key)
     _prompt_mod._configure(base, api_key)
@@ -194,7 +196,8 @@ def init(
 def flush() -> None:
     """Force-flush all pending spans, metrics, and log records.
     Call before process exit in serverless / short-lived environments."""
-    from opentelemetry import trace, metrics
+    from opentelemetry import metrics, trace
+
     tp = trace.get_tracer_provider()
     if hasattr(tp, "force_flush"):
         tp.force_flush()
