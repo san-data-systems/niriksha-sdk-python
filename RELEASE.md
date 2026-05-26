@@ -177,15 +177,6 @@ Users install with `pip install --pre nirikshaai`.
 - Workflow: `release.yml` (for `pypi` env) or `dev-release.yml` (for `pypi-dev` env)
 - Environment: `pypi` / `pypi-dev`
 
-### NVD API Key (all SDKs, speeds up security scans)
-
-| Step | Action | URL |
-|------|--------|-----|
-| 1 | Request a free NVD API key using the **niriksha.ai product email** | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) |
-| 2 | Add to GitHub secrets as `NVD_API_KEY` | [github.com/san-data-systems/niriksha-sdk-python/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-python/settings/secrets/actions) |
-
-> The same `NVD_API_KEY` can be added to all four SDK repos.
-
 ---
 
 ## Release Checklist
