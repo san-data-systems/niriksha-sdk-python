@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import logging
 import ssl
+from typing import Any
 
 from nirikshaai._logger import get_logger
 
@@ -69,7 +70,7 @@ def _build_grpc_channel_credentials(
     insecure: bool,
     tls_skip_verify: bool,
     ca_cert_file: str | None,
-):
+) -> Any:
     """Return a grpc.ChannelCredentials or None for plaintext."""
     import grpc
 
@@ -172,6 +173,7 @@ def _configure_otel(
         TraceIdRatioBased,
     )
 
+    sampler: Any  # ALWAYS_ON/OFF are StaticSampler; ParentBased is a different subtype
     if sample_rate >= 1.0:
         sampler = ALWAYS_ON
     elif sample_rate <= 0.0:

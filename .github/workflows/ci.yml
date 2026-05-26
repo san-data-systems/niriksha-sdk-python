@@ -66,4 +66,5 @@ jobs:
       - name: pip-audit vulnerability scan
         run: |
           pip install pip-audit
-          pip-audit -r <(pip freeze) --fail-on-vuln
+          pip freeze > /tmp/requirements.txt
+          pip-audit -r /tmp/requirements.txt

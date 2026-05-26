@@ -120,8 +120,9 @@ def list_prompts() -> list[dict[str, Any]]:
         req = urllib.request.Request(url, headers={"X-API-Key": _api_key})  # noqa: S310
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
-                result = json.loads(resp.read())
-                return result.get("data", {}).get("prompts", [])
+                result: dict[str, Any] = json.loads(resp.read())
+                prompts: list[dict[str, Any]] = result.get("data", {}).get("prompts", [])
+                return prompts
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 body = exc.read().decode(errors="replace")

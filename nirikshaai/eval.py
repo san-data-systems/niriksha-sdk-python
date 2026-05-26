@@ -98,7 +98,8 @@ def _post(url: str, payload: dict) -> dict[str, Any]:
     for attempt in range(1, 4):
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
-                return json.loads(resp.read())
+                result: dict[str, Any] = json.loads(resp.read())
+                return result
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 # Client errors — no point retrying
