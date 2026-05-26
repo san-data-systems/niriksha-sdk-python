@@ -80,7 +80,7 @@ from nirikshaai.baggage import detach_baggage, get_baggage, set_baggage
 from nirikshaai.serverless import with_flush
 from nirikshaai.middleware import NirikshaWSGIMiddleware, NirikshaASGIMiddleware
 
-__version__ = "0.2.0"  # keep in sync with pyproject.toml
+__version__ = "0.0.1"  # keep in sync with pyproject.toml
 
 __all__ = [
     "__version__",

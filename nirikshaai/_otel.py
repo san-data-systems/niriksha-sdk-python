@@ -7,7 +7,9 @@ import logging
 import ssl
 from typing import TYPE_CHECKING
 
-logger = logging.getLogger("nirikshaai")
+from nirikshaai._logger import get_logger
+
+logger = get_logger()
 
 _QUOTA_KEYWORDS = ("ResourceExhausted", "data limit reached", "quota_exceeded")
 
@@ -122,6 +124,11 @@ def _configure_otel(
         grpc_host = f"{host}:{otlp_port}"
 
     use_insecure = insecure or not endpoint.startswith("https")
+
+    if insecure or tls_skip_verify:
+        logger.warning(
+            "NirikshaAI: TLS verification disabled — do not use in production"
+        )
 
     headers: dict[str, str] = {"x-api-key": api_key}
     if capture_prompts:
