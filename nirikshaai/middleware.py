@@ -11,6 +11,7 @@ Usage — ASGI::
     from nirikshaai.middleware import NirikshaASGIMiddleware
     app = NirikshaASGIMiddleware(app)
 """
+
 from __future__ import annotations
 
 
@@ -20,6 +21,7 @@ class NirikshaWSGIMiddleware:
     def __init__(self, app):
         try:
             from opentelemetry.instrumentation.wsgi import OpenTelemetryMiddleware
+
             self._wrapped = OpenTelemetryMiddleware(app)
         except ImportError:
             self._wrapped = app  # graceful no-op if not installed
@@ -34,6 +36,7 @@ class NirikshaASGIMiddleware:
     def __init__(self, app):
         try:
             from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
+
             self._wrapped = OpenTelemetryMiddleware(app)
         except ImportError:
             self._wrapped = app  # graceful no-op

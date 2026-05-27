@@ -167,6 +167,7 @@ def init(
 
     from nirikshaai import eval as _eval_mod
     from nirikshaai import prompt as _prompt_mod
+
     base = endpoint.rstrip("/")
     _eval_mod._configure(base, api_key)
     _prompt_mod._configure(base, api_key)
@@ -196,6 +197,7 @@ def flush() -> None:
     """Force-flush all pending spans, metrics, and log records.
     Call before process exit in serverless / short-lived environments."""
     from opentelemetry import metrics, trace
+
     tp = trace.get_tracer_provider()
     if hasattr(tp, "force_flush"):
         tp.force_flush()

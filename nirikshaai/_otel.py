@@ -37,29 +37,29 @@ logging.getLogger("opentelemetry").addHandler(_quota_handler)
 # General web/infra instrumentations — auto-applied if the library is installed.
 # These cover any Python service (Django, Flask, FastAPI, databases, HTTP clients).
 _GENERAL_INSTRUMENTATIONS: dict[str, str] = {
-    "django":      "opentelemetry.instrumentation.django",
-    "flask":       "opentelemetry.instrumentation.flask",
-    "fastapi":     "opentelemetry.instrumentation.fastapi",
-    "starlette":   "opentelemetry.instrumentation.starlette",
-    "requests":    "opentelemetry.instrumentation.requests",
-    "urllib3":     "opentelemetry.instrumentation.urllib3",
-    "aiohttp":     "opentelemetry.instrumentation.aiohttp_client",
-    "grpc":        "opentelemetry.instrumentation.grpc",
-    "sqlalchemy":  "opentelemetry.instrumentation.sqlalchemy",
-    "psycopg2":    "opentelemetry.instrumentation.psycopg2",
-    "asyncpg":     "opentelemetry.instrumentation.asyncpg",
-    "pymongo":     "opentelemetry.instrumentation.pymongo",
-    "redis":       "opentelemetry.instrumentation.redis",
-    "celery":      "opentelemetry.instrumentation.celery",
+    "django": "opentelemetry.instrumentation.django",
+    "flask": "opentelemetry.instrumentation.flask",
+    "fastapi": "opentelemetry.instrumentation.fastapi",
+    "starlette": "opentelemetry.instrumentation.starlette",
+    "requests": "opentelemetry.instrumentation.requests",
+    "urllib3": "opentelemetry.instrumentation.urllib3",
+    "aiohttp": "opentelemetry.instrumentation.aiohttp_client",
+    "grpc": "opentelemetry.instrumentation.grpc",
+    "sqlalchemy": "opentelemetry.instrumentation.sqlalchemy",
+    "psycopg2": "opentelemetry.instrumentation.psycopg2",
+    "asyncpg": "opentelemetry.instrumentation.asyncpg",
+    "pymongo": "opentelemetry.instrumentation.pymongo",
+    "redis": "opentelemetry.instrumentation.redis",
+    "celery": "opentelemetry.instrumentation.celery",
 }
 
 # LLM instrumentations — only applied when enable_llm=True.
 _LLM_INSTRUMENTATIONS: dict[str, str] = {
-    "openai":      "opentelemetry.instrumentation.openai",
-    "anthropic":   "opentelemetry.instrumentation.anthropic",
-    "langchain":   "opentelemetry.instrumentation.langchain",
+    "openai": "opentelemetry.instrumentation.openai",
+    "anthropic": "opentelemetry.instrumentation.anthropic",
+    "langchain": "opentelemetry.instrumentation.langchain",
     "llama_index": "opentelemetry.instrumentation.llamaindex",
-    "mistral":     "opentelemetry.instrumentation.mistralai",
+    "mistral": "opentelemetry.instrumentation.mistralai",
     "google_generativeai": "opentelemetry.instrumentation.google_generativeai",
 }
 
@@ -106,9 +106,11 @@ def _build_exporter_kwargs(
         kwargs["insecure"] = True
     elif tls_skip_verify:
         import grpc
+
         kwargs["credentials"] = grpc.ssl_channel_credentials(ssl_target_name_override="")
     elif ca_cert_file:
         import grpc
+
         with open(ca_cert_file, "rb") as f:
             root_certs = f.read()
         kwargs["credentials"] = grpc.ssl_channel_credentials(root_certificates=root_certs)
@@ -219,13 +221,15 @@ def _configure_otel(
         grpc_host, headers, use_insecure, tls_skip_verify, ca_cert_file
     )
 
-    resource = Resource(attributes={
-        SERVICE_NAME: service_name,
-        "deployment.environment": environment,
-        "telemetry.sdk.name": "nirikshaai-python",
-        "telemetry.sdk.version": sdk_version,
-        "telemetry.sdk.language": "python",
-    })
+    resource = Resource(
+        attributes={
+            SERVICE_NAME: service_name,
+            "deployment.environment": environment,
+            "telemetry.sdk.name": "nirikshaai-python",
+            "telemetry.sdk.version": sdk_version,
+            "telemetry.sdk.language": "python",
+        }
+    )
 
     # ── Traces ────────────────────────────────────────────────────────────────
     sampler = _build_sampler(sample_rate)

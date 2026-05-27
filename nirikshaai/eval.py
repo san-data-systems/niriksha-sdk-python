@@ -116,19 +116,25 @@ def _post(url: str, payload: dict) -> dict[str, Any]:
             last_error = {"error": body, "status": exc.code}
             logger.debug(
                 "NirikshaAI eval POST %s attempt %d failed %d, retrying",
-                url, attempt, exc.code,
+                url,
+                attempt,
+                exc.code,
             )
         except urllib.error.URLError as exc:
             last_error = {"error": str(exc)}
             logger.debug(
                 "NirikshaAI eval POST %s attempt %d URLError: %s, retrying",
-                url, attempt, exc,
+                url,
+                attempt,
+                exc,
             )
         except Exception as exc:
             last_error = {"error": str(exc)}
             logger.debug(
                 "NirikshaAI eval POST %s attempt %d error: %s, retrying",
-                url, attempt, exc,
+                url,
+                attempt,
+                exc,
             )
         if attempt < 3:
             time.sleep(attempt * 0.5)
