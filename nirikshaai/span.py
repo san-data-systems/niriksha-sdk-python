@@ -7,6 +7,7 @@ RAG retrieval events, and tool-call events to OpenTelemetry spans.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
 from opentelemetry import trace
 
 

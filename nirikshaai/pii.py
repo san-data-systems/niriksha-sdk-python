@@ -19,21 +19,13 @@ import re
 # Compiled patterns — built once at import time for efficiency
 # ---------------------------------------------------------------------------
 
-_EMAIL_RE = re.compile(
-    r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
-)
+_EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
-_PHONE_RE = re.compile(
-    r"(\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}"
-)
+_PHONE_RE = re.compile(r"(\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}")
 
-_SSN_RE = re.compile(
-    r"\b\d{3}-\d{2}-\d{4}\b"
-)
+_SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 
-_CC_RE = re.compile(
-    r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{0,4}\b"
-)
+_CC_RE = re.compile(r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{0,4}\b")
 
 
 def redact_pii(s: str) -> str:

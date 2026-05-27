@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 from nirikshaai._logger import get_logger
 
@@ -29,6 +28,31 @@ def _configure(base_url: str, api_key: str) -> None:
     global _base_url, _api_key
     _base_url = base_url.rstrip("/")
     _api_key = api_key
+
+
+def _assert_https_url(url: str) -> None:
+    """Raise ValueError if the URL scheme is not http or https."""
+    if not url.startswith(("https://", "http://")):
+        raise ValueError(f"NirikshaAI: only http/https URLs are permitted, got: {url!r}")
+
+
+def _post_once(url: str, payload: dict) -> dict[str, Any]:
+    """Send a single POST request; returns the parsed response dict."""
+    req = urllib.request.Request(  # noqa: S310
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "X-API-Key": _api_key},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        return cast(dict[str, Any], json.loads(resp.read()))
+
+
+def _get_once(url: str) -> dict[str, Any]:
+    """Send a single GET request; returns the parsed response dict."""
+    req = urllib.request.Request(url, headers={"X-API-Key": _api_key})  # noqa: S310
+    with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        return cast(dict[str, Any], json.loads(resp.read()))
 
 
 def get_prompt(
@@ -56,54 +80,40 @@ def get_prompt(
     key = _cache_key(name, version, variables)
     if cache_ttl > 0:
         cached = _prompt_cache.get(key)
-        if cached is not None:
-            response, expiry = cached
-            if time.time() < expiry:
-                logger.debug("NirikshaAI get_prompt cache hit for %r", name)
-                return response
+        if cached is not None and time.time() < cached[1]:
+            logger.debug("NirikshaAI get_prompt cache hit for %r", name)
+            return cached[0]
 
     url = f"{_base_url}/api/v1/sdk/prompts/render"
+    _assert_https_url(url)
     payload: dict[str, Any] = {"name": name, "variables": variables or {}}
     if version is not None:
         payload["version"] = version
 
     last_exc: Exception | None = None
     for attempt in range(1, 4):
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json", "X-API-Key": _api_key},
-            method="POST",
-        )
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                raw = json.loads(resp.read())
-                data = raw.get("data", {})
-                result: dict[str, Any] = {
-                    "content": data.get("content", ""),
-                    "created_at": data.get("created_at", None),
-                    "updated_at": data.get("updated_at", None),
-                    "tags": data.get("tags", []),
-                }
-                if cache_ttl > 0:
-                    _prompt_cache[key] = (result, time.time() + cache_ttl)
-                return result
+            raw = _post_once(url, payload)
+            data = raw.get("data", {})
+            result: dict[str, Any] = {
+                "content": data.get("content", ""),
+                "created_at": data.get("created_at", None),
+                "updated_at": data.get("updated_at", None),
+                "tags": data.get("tags", []),
+            }
+            if cache_ttl > 0:
+                _prompt_cache[key] = (result, time.time() + cache_ttl)
+            return result
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 body = exc.read().decode(errors="replace")
                 raise ValueError(f"NirikshaAI get_prompt failed {exc.code}: {body}") from exc
             body = exc.read().decode(errors="replace")
             last_exc = ValueError(f"NirikshaAI get_prompt failed {exc.code}: {body}")
-            logger.debug(
-                "NirikshaAI get_prompt attempt %d failed %d, retrying",
-                attempt, exc.code,
-            )
+            logger.debug("NirikshaAI get_prompt attempt %d failed %d, retrying", attempt, exc.code)
         except Exception as exc:
             last_exc = exc
-            logger.debug(
-                "NirikshaAI get_prompt attempt %d error: %s, retrying",
-                attempt, exc,
-            )
+            logger.debug("NirikshaAI get_prompt attempt %d error: %s, retrying", attempt, exc)
         if attempt < 3:
             time.sleep(attempt * 0.5)
 
@@ -114,13 +124,12 @@ def get_prompt(
 def list_prompts() -> list[dict[str, Any]]:
     """List all prompt templates in the project (resolved from API key)."""
     url = f"{_base_url}/api/v1/sdk/prompts"
+    _assert_https_url(url)
     last_exc: Exception | None = None
     for attempt in range(1, 4):
-        req = urllib.request.Request(url, headers={"X-API-Key": _api_key})
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                result = json.loads(resp.read())
-                return result.get("data", {}).get("prompts", [])
+            result = _get_once(url)
+            return cast(list[dict[str, Any]], result.get("data", {}).get("prompts", []))
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 body = exc.read().decode(errors="replace")
@@ -128,15 +137,11 @@ def list_prompts() -> list[dict[str, Any]]:
             body = exc.read().decode(errors="replace")
             last_exc = ValueError(f"NirikshaAI list_prompts failed {exc.code}: {body}")
             logger.debug(
-                "NirikshaAI list_prompts attempt %d failed %d, retrying",
-                attempt, exc.code,
+                "NirikshaAI list_prompts attempt %d failed %d, retrying", attempt, exc.code
             )
         except Exception as exc:
             last_exc = exc
-            logger.debug(
-                "NirikshaAI list_prompts attempt %d error: %s, retrying",
-                attempt, exc,
-            )
+            logger.debug("NirikshaAI list_prompts attempt %d error: %s, retrying", attempt, exc)
         if attempt < 3:
             time.sleep(attempt * 0.5)
 

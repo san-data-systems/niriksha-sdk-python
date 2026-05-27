@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 from nirikshaai._logger import get_logger
 
@@ -87,9 +86,16 @@ def submit_evals_batch(evals: list[dict[str, Any]]) -> dict[str, Any]:
     return _post(url, {"evals": evals})
 
 
+def _assert_https_url(url: str) -> None:
+    """Raise ValueError if the URL scheme is not http or https."""
+    if not url.startswith(("https://", "http://")):
+        raise ValueError(f"NirikshaAI: only http/https URLs are permitted, got: {url!r}")
+
+
 def _post(url: str, payload: dict) -> dict[str, Any]:
+    _assert_https_url(url)
     data = json.dumps(payload).encode()
-    req = urllib.request.Request(
+    req = urllib.request.Request(  # noqa: S310
         url,
         data=data,
         headers={"Content-Type": "application/json", "X-API-Key": _api_key},
@@ -98,8 +104,8 @@ def _post(url: str, payload: dict) -> dict[str, Any]:
     last_error: dict[str, Any] = {}
     for attempt in range(1, 4):
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                return json.loads(resp.read())
+            with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
+                return cast(dict[str, Any], json.loads(resp.read()))
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 # Client errors — no point retrying
@@ -110,19 +116,25 @@ def _post(url: str, payload: dict) -> dict[str, Any]:
             last_error = {"error": body, "status": exc.code}
             logger.debug(
                 "NirikshaAI eval POST %s attempt %d failed %d, retrying",
-                url, attempt, exc.code,
+                url,
+                attempt,
+                exc.code,
             )
         except urllib.error.URLError as exc:
             last_error = {"error": str(exc)}
             logger.debug(
                 "NirikshaAI eval POST %s attempt %d URLError: %s, retrying",
-                url, attempt, exc,
+                url,
+                attempt,
+                exc,
             )
         except Exception as exc:
             last_error = {"error": str(exc)}
             logger.debug(
                 "NirikshaAI eval POST %s attempt %d error: %s, retrying",
-                url, attempt, exc,
+                url,
+                attempt,
+                exc,
             )
         if attempt < 3:
             time.sleep(attempt * 0.5)

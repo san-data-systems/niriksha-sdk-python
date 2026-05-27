@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib
 import logging
 import ssl
-from typing import TYPE_CHECKING
+from typing import Any
 
 from nirikshaai._logger import get_logger
 
@@ -38,29 +38,29 @@ logging.getLogger("opentelemetry").addHandler(_quota_handler)
 # General web/infra instrumentations — auto-applied if the library is installed.
 # These cover any Python service (Django, Flask, FastAPI, databases, HTTP clients).
 _GENERAL_INSTRUMENTATIONS: dict[str, str] = {
-    "django":      "opentelemetry.instrumentation.django",
-    "flask":       "opentelemetry.instrumentation.flask",
-    "fastapi":     "opentelemetry.instrumentation.fastapi",
-    "starlette":   "opentelemetry.instrumentation.starlette",
-    "requests":    "opentelemetry.instrumentation.requests",
-    "urllib3":     "opentelemetry.instrumentation.urllib3",
-    "aiohttp":     "opentelemetry.instrumentation.aiohttp_client",
-    "grpc":        "opentelemetry.instrumentation.grpc",
-    "sqlalchemy":  "opentelemetry.instrumentation.sqlalchemy",
-    "psycopg2":    "opentelemetry.instrumentation.psycopg2",
-    "asyncpg":     "opentelemetry.instrumentation.asyncpg",
-    "pymongo":     "opentelemetry.instrumentation.pymongo",
-    "redis":       "opentelemetry.instrumentation.redis",
-    "celery":      "opentelemetry.instrumentation.celery",
+    "django": "opentelemetry.instrumentation.django",
+    "flask": "opentelemetry.instrumentation.flask",
+    "fastapi": "opentelemetry.instrumentation.fastapi",
+    "starlette": "opentelemetry.instrumentation.starlette",
+    "requests": "opentelemetry.instrumentation.requests",
+    "urllib3": "opentelemetry.instrumentation.urllib3",
+    "aiohttp": "opentelemetry.instrumentation.aiohttp_client",
+    "grpc": "opentelemetry.instrumentation.grpc",
+    "sqlalchemy": "opentelemetry.instrumentation.sqlalchemy",
+    "psycopg2": "opentelemetry.instrumentation.psycopg2",
+    "asyncpg": "opentelemetry.instrumentation.asyncpg",
+    "pymongo": "opentelemetry.instrumentation.pymongo",
+    "redis": "opentelemetry.instrumentation.redis",
+    "celery": "opentelemetry.instrumentation.celery",
 }
 
 # LLM instrumentations — only applied when enable_llm=True.
 _LLM_INSTRUMENTATIONS: dict[str, str] = {
-    "openai":      "opentelemetry.instrumentation.openai",
-    "anthropic":   "opentelemetry.instrumentation.anthropic",
-    "langchain":   "opentelemetry.instrumentation.langchain",
+    "openai": "opentelemetry.instrumentation.openai",
+    "anthropic": "opentelemetry.instrumentation.anthropic",
+    "langchain": "opentelemetry.instrumentation.langchain",
     "llama_index": "opentelemetry.instrumentation.llamaindex",
-    "mistral":     "opentelemetry.instrumentation.mistralai",
+    "mistral": "opentelemetry.instrumentation.mistralai",
     "google_generativeai": "opentelemetry.instrumentation.google_generativeai",
 }
 
@@ -70,7 +70,7 @@ def _build_grpc_channel_credentials(
     insecure: bool,
     tls_skip_verify: bool,
     ca_cert_file: str | None,
-):
+) -> Any:
     """Return a grpc.ChannelCredentials or None for plaintext."""
     import grpc
 
@@ -89,6 +89,92 @@ def _build_grpc_channel_credentials(
         return grpc.ssl_channel_credentials(root_certificates=root_certs)
 
     return grpc.ssl_channel_credentials()  # system roots
+
+
+def _build_exporter_kwargs(
+    grpc_host: str,
+    headers: dict[str, str],
+    use_insecure: bool,
+    tls_skip_verify: bool,
+    ca_cert_file: str | None,
+) -> dict:
+    """Build OTLP exporter keyword arguments."""
+    kwargs: dict = {
+        "endpoint": f"grpc://{grpc_host}",
+        "headers": headers,
+    }
+    if use_insecure:
+        kwargs["insecure"] = True
+    elif tls_skip_verify:
+        import grpc
+
+        kwargs["credentials"] = grpc.ssl_channel_credentials(ssl_target_name_override="")
+    elif ca_cert_file:
+        import grpc
+
+        with open(ca_cert_file, "rb") as f:
+            root_certs = f.read()
+        kwargs["credentials"] = grpc.ssl_channel_credentials(root_certificates=root_certs)
+    return kwargs
+
+
+def _build_sampler(sample_rate: float) -> Any:
+    """Return an appropriate OpenTelemetry sampler for the given rate."""
+    from opentelemetry.sdk.trace.sampling import (
+        ALWAYS_OFF,
+        ALWAYS_ON,
+        ParentBased,
+        TraceIdRatioBased,
+    )
+
+    if sample_rate >= 1.0:
+        return ALWAYS_ON
+    if sample_rate <= 0.0:
+        return ALWAYS_OFF
+    return ParentBased(TraceIdRatioBased(sample_rate))
+
+
+def _setup_metrics(resource: Any, exporter_kwargs: dict) -> None:
+    """Configure the OpenTelemetry metrics pipeline."""
+    try:
+        from opentelemetry import metrics
+        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+            OTLPMetricExporter,
+        )
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+        metric_exporter = OTLPMetricExporter(**exporter_kwargs)
+        reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=60_000)
+        mp = MeterProvider(resource=resource, metric_readers=[reader])
+        metrics.set_meter_provider(mp)
+        logger.debug("NirikshaAI: metrics exporter configured")
+    except ImportError:
+        logger.debug(
+            "NirikshaAI: metrics exporter not available "
+            "(install opentelemetry-exporter-otlp-proto-grpc)"
+        )
+
+
+def _setup_logs(resource: Any, exporter_kwargs: dict) -> None:
+    """Configure the OpenTelemetry logging pipeline."""
+    try:
+        from opentelemetry import _logs
+        from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+        log_exporter = OTLPLogExporter(**exporter_kwargs)
+        lp = LoggerProvider(resource=resource)
+        lp.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+        _logs.set_logger_provider(lp)
+
+        # Attach to root logger so existing logging.getLogger(...) calls are exported.
+        handler = LoggingHandler(level=logging.NOTSET, logger_provider=lp)
+        logging.getLogger().addHandler(handler)
+        logger.debug("NirikshaAI: logs exporter configured")
+    except ImportError:
+        logger.debug("NirikshaAI: logs exporter not available")
 
 
 def _configure_otel(
@@ -111,10 +197,10 @@ def _configure_otel(
     sdk_version: str = "0.1.0",
 ) -> None:
     from opentelemetry import trace
-    from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
     # Derive gRPC address
     if otlp_endpoint:
@@ -126,99 +212,40 @@ def _configure_otel(
     use_insecure = insecure or not endpoint.startswith("https")
 
     if insecure or tls_skip_verify:
-        logger.warning(
-            "NirikshaAI: TLS verification disabled — do not use in production"
-        )
+        logger.warning("NirikshaAI: TLS verification disabled — do not use in production")
 
     headers: dict[str, str] = {"x-api-key": api_key}
     if capture_prompts:
         headers["x-capture-prompts"] = "true"
 
-    # Build exporter kwargs — tls_skip_verify requires a custom ssl_context
-    def _exporter_kwargs() -> dict:
-        kwargs: dict = {
-            "endpoint": f"grpc://{grpc_host}",
-            "headers": headers,
-        }
-        if use_insecure:
-            kwargs["insecure"] = True
-        elif tls_skip_verify:
-            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            import grpc
-            kwargs["credentials"] = grpc.ssl_channel_credentials(
-                ssl_target_name_override=""
-            )
-        elif ca_cert_file:
-            import grpc
-            with open(ca_cert_file, "rb") as f:
-                root_certs = f.read()
-            kwargs["credentials"] = grpc.ssl_channel_credentials(
-                root_certificates=root_certs
-            )
-        return kwargs
-
-    resource = Resource(attributes={
-        SERVICE_NAME: service_name,
-        "deployment.environment": environment,
-        "telemetry.sdk.name": "nirikshaai-python",
-        "telemetry.sdk.version": sdk_version,
-        "telemetry.sdk.language": "python",
-    })
-
-    # ── Traces ────────────────────────────────────────────────────────────────
-    from opentelemetry.sdk.trace.sampling import (
-        TraceIdRatioBased, ParentBased, ALWAYS_ON, ALWAYS_OFF,
+    exporter_kwargs = _build_exporter_kwargs(
+        grpc_host, headers, use_insecure, tls_skip_verify, ca_cert_file
     )
 
-    if sample_rate >= 1.0:
-        sampler = ALWAYS_ON
-    elif sample_rate <= 0.0:
-        sampler = ALWAYS_OFF
-    else:
-        sampler = ParentBased(TraceIdRatioBased(sample_rate))
+    resource = Resource(
+        attributes={
+            SERVICE_NAME: service_name,
+            "deployment.environment": environment,
+            "telemetry.sdk.name": "nirikshaai-python",
+            "telemetry.sdk.version": sdk_version,
+            "telemetry.sdk.language": "python",
+        }
+    )
 
-    trace_exporter = OTLPSpanExporter(**_exporter_kwargs())
+    # ── Traces ────────────────────────────────────────────────────────────────
+    sampler = _build_sampler(sample_rate)
+    trace_exporter = OTLPSpanExporter(**exporter_kwargs)
     tp = TracerProvider(resource=resource, sampler=sampler)
     tp.add_span_processor(BatchSpanProcessor(trace_exporter))
     trace.set_tracer_provider(tp)
 
     # ── Metrics ───────────────────────────────────────────────────────────────
     if enable_metrics:
-        try:
-            from opentelemetry.sdk.metrics import MeterProvider
-            from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-            from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-            from opentelemetry import metrics
-
-            metric_exporter = OTLPMetricExporter(**_exporter_kwargs())
-            reader = PeriodicExportingMetricReader(metric_exporter, export_interval_millis=60_000)
-            mp = MeterProvider(resource=resource, metric_readers=[reader])
-            metrics.set_meter_provider(mp)
-            logger.debug("NirikshaAI: metrics exporter configured")
-        except ImportError:
-            logger.debug("NirikshaAI: metrics exporter not available (install opentelemetry-exporter-otlp-proto-grpc)")
+        _setup_metrics(resource, exporter_kwargs)
 
     # ── Logs ──────────────────────────────────────────────────────────────────
     if enable_logs:
-        try:
-            from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-            from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-            from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-            from opentelemetry import _logs
-
-            log_exporter = OTLPLogExporter(**_exporter_kwargs())
-            lp = LoggerProvider(resource=resource)
-            lp.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-            _logs.set_logger_provider(lp)
-
-            # Attach to root logger so existing logging.getLogger(...) calls are exported.
-            handler = LoggingHandler(level=logging.NOTSET, logger_provider=lp)
-            logging.getLogger().addHandler(handler)
-            logger.debug("NirikshaAI: logs exporter configured")
-        except ImportError:
-            logger.debug("NirikshaAI: logs exporter not available")
+        _setup_logs(resource, exporter_kwargs)
 
     # ── Auto-instrumentation ──────────────────────────────────────────────────
     skip = set(disable_instrumentations)

@@ -6,6 +6,7 @@ Consumers can configure it via standard :mod:`logging` configuration::
     import logging
     logging.getLogger("nirikshaai").setLevel(logging.DEBUG)
 """
+
 from __future__ import annotations
 
 import logging
