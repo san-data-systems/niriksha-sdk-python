@@ -6,7 +6,7 @@ import json
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 from nirikshaai._logger import get_logger
 
@@ -45,14 +45,14 @@ def _post_once(url: str, payload: dict) -> dict[str, Any]:
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
-        return json.loads(resp.read())
+        return cast(dict[str, Any], json.loads(resp.read()))
 
 
 def _get_once(url: str) -> dict[str, Any]:
     """Send a single GET request; returns the parsed response dict."""
     req = urllib.request.Request(url, headers={"X-API-Key": _api_key})  # noqa: S310
     with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
-        return json.loads(resp.read())
+        return cast(dict[str, Any], json.loads(resp.read()))
 
 
 def get_prompt(
@@ -129,7 +129,7 @@ def list_prompts() -> list[dict[str, Any]]:
     for attempt in range(1, 4):
         try:
             result = _get_once(url)
-            return result.get("data", {}).get("prompts", [])
+            return cast(list[dict[str, Any]], result.get("data", {}).get("prompts", []))
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 body = exc.read().decode(errors="replace")

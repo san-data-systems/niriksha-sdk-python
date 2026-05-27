@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import logging
 import ssl
+from typing import Any
 
 from nirikshaai._logger import get_logger
 
@@ -69,7 +70,7 @@ def _build_grpc_channel_credentials(
     insecure: bool,
     tls_skip_verify: bool,
     ca_cert_file: str | None,
-):
+) -> Any:
     """Return a grpc.ChannelCredentials or None for plaintext."""
     import grpc
 
@@ -117,7 +118,7 @@ def _build_exporter_kwargs(
     return kwargs
 
 
-def _build_sampler(sample_rate: float):
+def _build_sampler(sample_rate: float) -> Any:
     """Return an appropriate OpenTelemetry sampler for the given rate."""
     from opentelemetry.sdk.trace.sampling import (
         ALWAYS_OFF,
@@ -133,7 +134,7 @@ def _build_sampler(sample_rate: float):
     return ParentBased(TraceIdRatioBased(sample_rate))
 
 
-def _setup_metrics(resource, exporter_kwargs: dict) -> None:
+def _setup_metrics(resource: Any, exporter_kwargs: dict) -> None:
     """Configure the OpenTelemetry metrics pipeline."""
     try:
         from opentelemetry import metrics
@@ -155,7 +156,7 @@ def _setup_metrics(resource, exporter_kwargs: dict) -> None:
         )
 
 
-def _setup_logs(resource, exporter_kwargs: dict) -> None:
+def _setup_logs(resource: Any, exporter_kwargs: dict) -> None:
     """Configure the OpenTelemetry logging pipeline."""
     try:
         from opentelemetry import _logs

@@ -6,7 +6,7 @@ import json
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 from nirikshaai._logger import get_logger
 
@@ -105,7 +105,7 @@ def _post(url: str, payload: dict) -> dict[str, Any]:
     for attempt in range(1, 4):
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310
-                return json.loads(resp.read())
+                return cast(dict[str, Any], json.loads(resp.read()))
         except urllib.error.HTTPError as exc:
             if exc.code < 500:
                 # Client errors — no point retrying
