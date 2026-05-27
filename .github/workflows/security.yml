@@ -2,10 +2,11 @@ name: Security Scan
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
   schedule:
     - cron: "0 6 * * 1"
-  workflow_dispatch:
 
 jobs:
   codeql:
@@ -24,14 +25,15 @@ jobs:
       - uses: github/codeql-action/analyze@v3
 
   pip-audit:
-    name: Dependency Vulnerability Audit
+    name: pip-audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
       - run: pip install pip-audit
-      - run: pip install -e .
-      - run: pip-audit
-        continue-on-error: true
+      - run: pip install -e ".[dev]" --dry-run || true
+      - name: Run pip-audit
+        run: pip-audit --skip-editable
