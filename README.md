@@ -47,6 +47,11 @@ pip install "nirikshaai[all,llm]"
 
 **Minimum Python version:** 3.9
 
+On Python 3.9 the `llm` extra installs everything except the instrumentors whose
+upstream packages require 3.10 or newer (currently CrewAI, MCP and smolagents) — they
+are skipped by an environment marker rather than failing the install. Everything else,
+including the whole SDK, works on 3.9.
+
 ---
 
 ## Quick Start

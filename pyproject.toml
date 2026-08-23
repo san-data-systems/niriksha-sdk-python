@@ -60,9 +60,7 @@ llm = [
   # Agent / orchestration frameworks
   "opentelemetry-instrumentation-langchain>=0.27b0",
   "opentelemetry-instrumentation-llamaindex>=0.27b0",
-  "opentelemetry-instrumentation-crewai>=0.27b0",
   "opentelemetry-instrumentation-haystack>=0.27b0",
-  "opentelemetry-instrumentation-mcp>=0.27b0",
   "opentelemetry-instrumentation-openai-agents>=0.27b0",
   "opentelemetry-instrumentation-agno>=0.27b0",
   # Agent frameworks OpenLLMetry does not cover — OpenInference (Arize) does.
@@ -71,7 +69,11 @@ llm = [
   "openinference-instrumentation-google-adk>=0.1",
   "openinference-instrumentation-dspy>=0.1",
   "openinference-instrumentation-guardrails>=0.1",
-  # No 3.9-compatible release, same as crewai and mcp above.
+  # These publish no wheel that supports Python 3.9. Without the marker pip
+  # cannot resolve the extra at all on 3.9, which would take every other
+  # instrumentor down with them rather than skipping just these.
+  "opentelemetry-instrumentation-crewai>=0.27b0; python_version >= '3.10'",
+  "opentelemetry-instrumentation-mcp>=0.27b0; python_version >= '3.10'",
   "openinference-instrumentation-smolagents>=0.1; python_version >= '3.10'",
   # Vector stores
   "opentelemetry-instrumentation-chromadb>=0.27b0",
