@@ -63,6 +63,16 @@ llm = [
   "opentelemetry-instrumentation-crewai>=0.27b0",
   "opentelemetry-instrumentation-haystack>=0.27b0",
   "opentelemetry-instrumentation-mcp>=0.27b0",
+  "opentelemetry-instrumentation-openai-agents>=0.27b0",
+  "opentelemetry-instrumentation-agno>=0.27b0",
+  # Agent frameworks OpenLLMetry does not cover — OpenInference (Arize) does.
+  # Its attributes are read by the same materialized LLM columns.
+  "openinference-instrumentation-autogen>=0.1",
+  "openinference-instrumentation-google-adk>=0.1",
+  "openinference-instrumentation-dspy>=0.1",
+  "openinference-instrumentation-guardrails>=0.1",
+  # No 3.9-compatible release, same as crewai and mcp above.
+  "openinference-instrumentation-smolagents>=0.1; python_version >= '3.10'",
   # Vector stores
   "opentelemetry-instrumentation-chromadb>=0.27b0",
   "opentelemetry-instrumentation-pinecone>=0.27b0",

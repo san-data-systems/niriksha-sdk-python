@@ -66,6 +66,21 @@ _GENERAL_INSTRUMENTATIONS: dict[str, str] = {
 # All of these emit OTel GenAI (`gen_ai.*`) or OpenInference attributes, which
 # the platform already maps to its materialized LLM columns, so adding one
 # requires no server-side work.
+#
+# Two upstream conventions appear here. `opentelemetry.instrumentation.*` is
+# OpenLLMetry (traceloop); `openinference.instrumentation.*` is OpenInference
+# (Arize), used only for frameworks OpenLLMetry does not cover. Both are read by
+# the platform's materialized columns, so the choice is purely about which
+# project actually ships an instrumentor for a given framework.
+#
+# Before adding an entry, confirm the wheel really exports a class whose name
+# ends in "Instrumentor" — that is what _try_instrument looks for, and it does
+# nothing at all when there is none. `openinference-instrumentation-pydantic-ai`
+# is the cautionary case: it exists, installs, and exports an
+# OpenInferenceSpanProcessor rather than an instrumentor, so listing it here
+# would have been another silently dead entry. Pydantic AI is a doc recipe
+# instead — it emits OTel GenAI spans natively, so pointing it at the gateway is
+# all that is needed.
 _LLM_INSTRUMENTATIONS: dict[str, str] = {
     # Model providers
     "openai": "opentelemetry.instrumentation.openai",
@@ -88,6 +103,14 @@ _LLM_INSTRUMENTATIONS: dict[str, str] = {
     "crewai": "opentelemetry.instrumentation.crewai",
     "haystack": "opentelemetry.instrumentation.haystack",
     "mcp": "opentelemetry.instrumentation.mcp",
+    "openai_agents": "opentelemetry.instrumentation.openai_agents",
+    "agno": "opentelemetry.instrumentation.agno",
+    # Agent frameworks covered only by OpenInference
+    "autogen": "openinference.instrumentation.autogen",
+    "google_adk": "openinference.instrumentation.google_adk",
+    "dspy": "openinference.instrumentation.dspy",
+    "smolagents": "openinference.instrumentation.smolagents",
+    "guardrails": "openinference.instrumentation.guardrails",
     # Vector stores — populate the RAG retrieval columns
     "chromadb": "opentelemetry.instrumentation.chromadb",
     "pinecone": "opentelemetry.instrumentation.pinecone",

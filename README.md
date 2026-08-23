@@ -183,6 +183,12 @@ Installed by the `llm` extra. Each instrumentor is applied only if its library i
 importable, so installing the extra in a project that uses just one of them is
 harmless.
 
+Most of these come from [OpenLLMetry](https://github.com/traceloop/openllmetry); a
+few frameworks it does not cover come from
+[OpenInference](https://github.com/Arize-ai/openinference) instead. Both conventions
+land in the same views, so the distinction only matters if you are pinning versions
+yourself.
+
 **Model providers**
 
 | Library | What's captured |
@@ -211,7 +217,18 @@ harmless.
 | `crewai` | Crew and agent task execution spans |
 | `haystack` | Pipeline and component spans |
 | `mcp` | MCP tool calls, server name and method |
+| `openai_agents` | `Runner.run` spans, agent name, handoffs, tool calls |
+| `agno` | Agent run spans, team and tool execution |
+| `autogen` | Conversable-agent messages, group-chat turns |
+| `google_adk` | Agent invocations, tool calls, session id |
+| `dspy` | Module and predictor spans, signature name |
+| `smolagents` | Agent step spans, tool calls, final answer |
+| `guardrails` | Guard validation spans, pass/fail per validator |
 | `langgraph` | One span per graph node, correctly parented — node name, node kind, thread id ([details](#langgraph)) |
+
+> **Pydantic AI** is deliberately absent from this table. It emits OpenTelemetry
+> GenAI spans natively, so it needs no instrumentor — see
+> [Frameworks that need no instrumentor](#frameworks-that-need-no-instrumentor).
 
 **Vector stores** — these populate the RAG retrieval views (data source, document count, top score).
 
@@ -288,6 +305,38 @@ Notes and limits:
   ```
 
   `instrument()` is idempotent — calling it twice does not double-count nodes.
+
+### Frameworks that need no instrumentor
+
+Some frameworks already emit OpenTelemetry GenAI spans themselves. For those, the
+correct integration is configuration, not code — an instrumentor would either
+duplicate the spans or translate them into a different convention for no gain.
+
+**Pydantic AI** emits `gen_ai.*` spans natively. Call `nirikshaai.init()` as usual
+and enable Pydantic AI's own instrumentation; its spans become children of yours:
+
+```python
+import nirikshaai
+from pydantic_ai import Agent
+
+nirikshaai.init(
+    endpoint="https://api.nirikshaai.example.com",
+    api_key="nai_...",
+    service_name="pricing-agent",
+)
+
+agent = Agent("openai:gpt-4o", instrument=True)   # emits gen_ai.* spans
+```
+
+`enable_llm` is not required for this — Pydantic AI is not patched, so there is
+nothing to opt into. Set it only if you also want the underlying model client
+instrumented.
+
+There *is* a published `openinference-instrumentation-pydantic-ai` package, and it is
+intentionally not used here: it ships a span **processor** that rewrites native spans
+into OpenInference attributes, not an instrumentor. Since the platform already reads
+`gen_ai.*` directly, that translation would add a dependency and change nothing you
+can see.
 
 ---
 
