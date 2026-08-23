@@ -54,14 +54,46 @@ _GENERAL_INSTRUMENTATIONS: dict[str, str] = {
     "celery": "opentelemetry.instrumentation.celery",
 }
 
-# LLM instrumentations — only applied when enable_llm=True.
+# LLM, agent-framework and vector-store instrumentations — only applied when
+# enable_llm=True.
+#
+# Every entry here must also be pinned in the "llm" extra in pyproject.toml.
+# An entry that is not pinned is silently never installed and so never runs:
+# _try_instrument swallows the ImportError. tests/test_otel_instrumentations.py
+# asserts the two lists agree, because they previously did not — llama_index,
+# mistralai and google_generativeai were listed here but absent from the extra.
+#
+# All of these emit OTel GenAI (`gen_ai.*`) or OpenInference attributes, which
+# the platform already maps to its materialized LLM columns, so adding one
+# requires no server-side work.
 _LLM_INSTRUMENTATIONS: dict[str, str] = {
+    # Model providers
     "openai": "opentelemetry.instrumentation.openai",
     "anthropic": "opentelemetry.instrumentation.anthropic",
+    "bedrock": "opentelemetry.instrumentation.bedrock",
+    "vertexai": "opentelemetry.instrumentation.vertexai",
+    "google_generativeai": "opentelemetry.instrumentation.google_generativeai",
+    "mistral": "opentelemetry.instrumentation.mistralai",
+    "cohere": "opentelemetry.instrumentation.cohere",
+    "groq": "opentelemetry.instrumentation.groq",
+    "ollama": "opentelemetry.instrumentation.ollama",
+    "together": "opentelemetry.instrumentation.together",
+    "replicate": "opentelemetry.instrumentation.replicate",
+    "watsonx": "opentelemetry.instrumentation.watsonx",
+    "sagemaker": "opentelemetry.instrumentation.sagemaker",
+    "transformers": "opentelemetry.instrumentation.transformers",
+    # Agent / orchestration frameworks
     "langchain": "opentelemetry.instrumentation.langchain",
     "llama_index": "opentelemetry.instrumentation.llamaindex",
-    "mistral": "opentelemetry.instrumentation.mistralai",
-    "google_generativeai": "opentelemetry.instrumentation.google_generativeai",
+    "crewai": "opentelemetry.instrumentation.crewai",
+    "haystack": "opentelemetry.instrumentation.haystack",
+    "mcp": "opentelemetry.instrumentation.mcp",
+    # Vector stores — populate the RAG retrieval columns
+    "chromadb": "opentelemetry.instrumentation.chromadb",
+    "pinecone": "opentelemetry.instrumentation.pinecone",
+    "qdrant": "opentelemetry.instrumentation.qdrant",
+    "weaviate": "opentelemetry.instrumentation.weaviate",
+    "milvus": "opentelemetry.instrumentation.milvus",
 }
 
 
@@ -268,10 +300,21 @@ def _try_instrument(lib_name: str, module_path: str, capture_prompts: bool) -> N
                 instrumentor = getattr(mod, attr)
                 break
         if instrumentor is not None:
-            kwargs: dict = {}
             if capture_prompts:
-                kwargs["capture_content"] = True
-            instrumentor().instrument(**kwargs)
+                # capture_content is not universal across instrumentors. Falling
+                # back keeps the span flowing (without prompt bodies) instead of
+                # dropping instrumentation for that library entirely.
+                try:
+                    instrumentor().instrument(capture_content=True)
+                except TypeError:
+                    logger.debug(
+                        "NirikshaAI: %s does not support capture_content; "
+                        "instrumenting without prompt capture",
+                        lib_name,
+                    )
+                    instrumentor().instrument()
+            else:
+                instrumentor().instrument()
             logger.debug("NirikshaAI: auto-instrumented %s", lib_name)
     except ImportError:
         pass
