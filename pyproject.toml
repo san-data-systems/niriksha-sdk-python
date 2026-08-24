@@ -38,11 +38,40 @@ all = [
   "opentelemetry-instrumentation-redis>=0.45b0",
   "opentelemetry-instrumentation-celery>=0.45b0",
 ]
-# LLM-specific instrumentations (opt-in)
+# LLM, agent-framework and vector-store instrumentations (opt-in).
+# Must stay in sync with _LLM_INSTRUMENTATIONS in nirikshaai/_otel.py —
+# tests/test_otel_instrumentations.py enforces this.
 llm = [
+  # Model providers
   "opentelemetry-instrumentation-openai>=0.27b0",
   "opentelemetry-instrumentation-anthropic>=0.27b0",
+  "opentelemetry-instrumentation-bedrock>=0.27b0",
+  "opentelemetry-instrumentation-vertexai>=0.27b0",
+  "opentelemetry-instrumentation-google-generativeai>=0.27b0",
+  "opentelemetry-instrumentation-mistralai>=0.27b0",
+  "opentelemetry-instrumentation-cohere>=0.27b0",
+  "opentelemetry-instrumentation-groq>=0.27b0",
+  "opentelemetry-instrumentation-ollama>=0.27b0",
+  "opentelemetry-instrumentation-together>=0.27b0",
+  "opentelemetry-instrumentation-replicate>=0.27b0",
+  "opentelemetry-instrumentation-watsonx>=0.27b0",
+  "opentelemetry-instrumentation-sagemaker>=0.27b0",
+  "opentelemetry-instrumentation-transformers>=0.27b0",
+  # Agent / orchestration frameworks
   "opentelemetry-instrumentation-langchain>=0.27b0",
+  "opentelemetry-instrumentation-llamaindex>=0.27b0",
+  "opentelemetry-instrumentation-haystack>=0.27b0",
+  # These two publish no wheel that supports Python 3.9. Without the marker pip
+  # cannot resolve the extra at all on 3.9, which would take all 24 down with
+  # them rather than skipping these two.
+  "opentelemetry-instrumentation-crewai>=0.27b0; python_version >= '3.10'",
+  "opentelemetry-instrumentation-mcp>=0.27b0; python_version >= '3.10'",
+  # Vector stores
+  "opentelemetry-instrumentation-chromadb>=0.27b0",
+  "opentelemetry-instrumentation-pinecone>=0.27b0",
+  "opentelemetry-instrumentation-qdrant>=0.27b0",
+  "opentelemetry-instrumentation-weaviate>=0.27b0",
+  "opentelemetry-instrumentation-milvus>=0.27b0",
 ]
 dev = [
     "pytest>=8.0",

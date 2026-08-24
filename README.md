@@ -47,6 +47,11 @@ pip install "nirikshaai[all,llm]"
 
 **Minimum Python version:** 3.9
 
+On Python 3.9 the `llm` extra installs everything except the instrumentors whose
+upstream packages require 3.10 or newer (currently CrewAI and MCP) — they are
+skipped by an environment marker rather than failing the install. Everything else,
+including the whole SDK, works on 3.9.
+
 ---
 
 ## Quick Start
@@ -177,16 +182,50 @@ nirikshaai.init(
 | `redis` | Redis command name (values are not captured) |
 | `celery` | Task name, queue, execution state, retry count |
 
-### LLM (requires `enable_llm=True`)
+### LLM, agents and vector stores (requires `enable_llm=True`)
+
+Installed by the `llm` extra. Each instrumentor is applied only if its library is
+importable, so installing the extra in a project that uses just one of them is
+harmless.
+
+**Model providers**
 
 | Library | What's captured |
 |---|---|
 | `openai` | Chat completions, embeddings, model name, token usage (prompt + completion) |
 | `anthropic` | Messages API calls, model name, token usage |
+| `bedrock` | AWS Bedrock invocations, model ID, token usage |
+| `vertexai` | Vertex AI predictions, model name, token usage |
+| `google-generativeai` | Gemini API calls, model name, token usage |
+| `mistralai` | Chat completions, model name, token usage |
+| `cohere` | Generate, chat and rerank calls, model name, token usage |
+| `groq` | Chat completions, model name, token usage |
+| `ollama` | Local model calls, model name, token usage |
+| `together` | Chat and completion calls, model name, token usage |
+| `replicate` | Model run calls and prediction IDs |
+| `watsonx` | IBM watsonx.ai generation calls, model ID |
+| `sagemaker` | SageMaker endpoint invocations |
+| `transformers` | Local HuggingFace pipeline invocations |
+
+**Agent and orchestration frameworks**
+
+| Library | What's captured |
+|---|---|
 | `langchain` | Chain invocations, individual tool call spans, retrieval steps |
 | `llama_index` | Query engine spans, retrieval spans, synthesiser spans |
-| `mistralai` | Chat completions, model name, token usage |
-| `google-generativeai` | Gemini API calls, model name, token usage |
+| `crewai` | Crew and agent task execution spans |
+| `haystack` | Pipeline and component spans |
+| `mcp` | MCP tool calls, server name and method |
+
+**Vector stores** — these populate the RAG retrieval views (data source, document count, top score).
+
+| Library | What's captured |
+|---|---|
+| `chromadb` | Query and add operations, collection name |
+| `pinecone` | Query and upsert operations, index name |
+| `qdrant` | Search and upsert operations, collection name |
+| `weaviate` | Query operations, class name |
+| `milvus` | Search and insert operations, collection name |
 
 ---
 
