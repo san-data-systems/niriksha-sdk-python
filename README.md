@@ -20,6 +20,7 @@ Under the hood this is a thin wrapper around the [OpenTelemetry Python SDK](http
 - [Auto-Instrumented Libraries](#auto-instrumented-libraries)
 - [Using the Standard OTEL API](#using-the-standard-otel-api)
 - [Logging Integration](#logging-integration)
+- [Inline Guard](#inline-guard)
 - [Eval Submission](#eval-submission)
 - [Prompt Management](#prompt-management)
 - [Framework Examples](#framework-examples)
@@ -123,6 +124,9 @@ All parameters are passed to `nirikshaai.init()`.
 | `tls_skip_verify` | `bool` | `False` | Use TLS but skip server certificate validation. Dev/staging only. |
 | `ca_cert_file` | `str` | `None` | Path to a PEM CA certificate for verifying the gateway TLS cert. |
 | `disable_instrumentations` | `list[str]` | `[]` | Library names to skip during auto-instrumentation (e.g. `["django"]`) |
+| `guard_endpoint` | `str` | *derived* | Base URL of the guard endpoint — the gateway's HTTP listener. Derived from `otlp_endpoint`, or `endpoint` when that is unset. See [Inline Guard](#inline-guard) |
+| `guard_fail_open` | `str` | `"open"` | Behaviour when the guard is unreachable: `"open"`, `"closed"`, or `"secrets_closed"` |
+| `guard_mode` | `str` | `None` | Default mode for every guard call: `"monitor"` or `"block"` |
 
 ### Private Cloud examples
 
@@ -404,6 +408,135 @@ except PaymentError as exc:
 ```
 
 Logs are exported in batches over OTLP gRPC to the same endpoint as traces and metrics.
+
+---
+
+## Inline Guard
+
+Everything else in this SDK records what happened. The guard is enforcement: it
+checks text **before** it reaches the model, so a prompt injection can be refused
+and a leaked credential stripped rather than merely reported afterwards.
+
+```python
+import nirikshaai
+from nirikshaai import guard_check, GuardBlocked
+
+nirikshaai.init(
+    endpoint="https://app.niriksha.ai",
+    otlp_endpoint="grpc-ingest.niriksha.ai:443",
+    api_key="nai_...",
+    service_name="support-agent",
+)
+
+user_prompt = get_user_input()
+
+try:
+    verdict = guard_check(user_prompt)
+except GuardBlocked as blocked:
+    return f"That request was refused: {blocked.verdict.findings}"
+
+# On a redact verdict this returns the rewritten text; otherwise the original.
+safe_prompt = verdict.text_or(user_prompt)
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": safe_prompt}],
+)
+```
+
+### Verdicts
+
+| Action | What it means | What you should do |
+|---|---|---|
+| `allow` | Nothing found | Proceed |
+| `tag` | Something found, not reliable enough to act on | **Proceed.** Record it |
+| `redact` | Sensitive content found and removed | Proceed **with `verdict.text_or(text)`** |
+| `block` | High-confidence attack | Do not send |
+
+**Only `block` raises.** A `redact` verdict returns the rewritten text and
+carries on, because a customer who asked for PII stripping wants their data
+protected, not their application broken. Pass `raise_on_block=False` to handle a
+block yourself.
+
+The `Verdict` also carries `risk_score`, `risk_severity`, `findings`, `reasons`,
+`policy_source` and `policy_enforced` — the last two tell you whether your org's
+AIDR policy or the product default produced the verdict. Only the former is
+binding, and `guard_mode="monitor"` cannot lift a block your org's policy
+mandates.
+
+### Tool calls
+
+The check that can actually prevent an action, rather than describe it after the
+fact:
+
+```python
+from nirikshaai import guard_check_tool, GuardBlocked
+
+try:
+    guard_check_tool("bash", {"cmd": proposed_command})
+except GuardBlocked:
+    return "That tool call was refused."
+run(proposed_command)
+```
+
+Covers file destruction, shell execution, destructive SQL, credential access,
+network egress, and **a credential appearing in a tool argument** — the concrete
+exfiltration path when an agent is persuaded to pass a key to an outbound tool.
+
+### Whole conversations
+
+```python
+from nirikshaai import guard_check_batch
+
+action, verdicts = guard_check_batch([
+    {"text": m["content"], "direction": "input"} for m in messages
+], raise_on_block=False)
+```
+
+A per-string API is an N+1 for a multi-turn message array, which is every real
+chat application. Up to 32 items; the aggregate action is the most severe of the
+set, because one blocked message means the conversation must not be sent.
+
+### When the guard is unreachable
+
+| `guard_fail_open` | Behaviour |
+|---|---|
+| `"open"` *(default)* | Allow the text through |
+| `"closed"` | Block everything |
+| `"secrets_closed"` | Allow everything **except** locally-detectable credentials |
+
+Fail-open is the default because a guard outage must not take down your
+application — but it is **never silent**. Every fall-back logs a warning, sets
+`verdict.failed_open`, and increments a `guard.fail_open` counter. A silent
+fail-open is a security hole wearing a reliability costume: the control appears to
+work right up until the moment it is needed.
+
+`"secrets_closed"` is the mode worth using in production. Ten prefix-anchored
+secret formats are embedded in the SDK — AWS, GitHub, Slack, Stripe, Google,
+OpenAI, Anthropic, PEM private keys, NirikshaAI's own — so a server outage stops
+credential exfiltration locally while everything else still flows. `"closed"` is
+correct only for a hard compliance boundary; for everyone else it converts a guard
+outage into an application outage.
+
+### Where the guard lives
+
+The guard endpoint is served by the **OTLP gateway**, not the REST API. In SaaS
+those are different hosts, so the URL is derived from `otlp_endpoint` when you set
+it, and from `endpoint` when you do not:
+
+| `endpoint` | `otlp_endpoint` | Derived guard URL |
+|---|---|---|
+| `https://niriksha.internal` | *(unset)* | `https://niriksha.internal` |
+| `https://app.niriksha.ai` | `grpc-ingest.niriksha.ai:443` | `https://grpc-ingest.niriksha.ai:443` |
+| *(any)* | `niriksha.internal:4317` | `http://niriksha.internal:4318` |
+
+The last row translates the gateway's default gRPC port to its default HTTP port.
+A non-default port is used as configured, since guessing would be worse than
+reusing what you already set. Pass `guard_endpoint` explicitly for anything this
+does not cover — a wrong value shows up as "guard unreachable" on every call.
+
+Requests time out after 3 seconds with **no retry**: this is a synchronous call in
+front of your LLM request, and retrying would turn a 3-second timeout into a
+9-second one. The fail mode is a better answer than a slower one.
 
 ---
 
