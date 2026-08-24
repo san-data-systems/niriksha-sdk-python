@@ -71,10 +71,26 @@ def test_every_pinned_llm_distribution_is_loaded() -> None:
     )
 
 
+# The two upstream instrumentor projects. OpenLLMetry publishes under
+# opentelemetry.instrumentation.*, OpenInference under openinference.*. Anything
+# else is a typo, and a typo'd module path is silently dead: _try_instrument
+# cannot tell it apart from an uninstalled library.
+_UPSTREAM_PREFIXES = ("opentelemetry.instrumentation.", "openinference.instrumentation.")
+
+
 def test_instrumentation_module_paths_are_well_formed() -> None:
     for lib, module in _LLM_INSTRUMENTATIONS.items():
-        assert module.startswith("opentelemetry.instrumentation."), (
+        assert module.startswith(_UPSTREAM_PREFIXES), (
             f"{lib} maps to an unexpected module path: {module}"
+        )
+
+
+def test_builtin_instrumentors_are_not_listed_as_upstream() -> None:
+    """An in-repo module in the third-party dict would fail the pinning check
+    for a reason that has nothing to do with the bug that check exists to catch."""
+    for lib, module in _LLM_INSTRUMENTATIONS.items():
+        assert not module.startswith("nirikshaai."), (
+            f"{lib} is built in and belongs in _BUILTIN_LLM_INSTRUMENTORS, not here"
         )
 
 
