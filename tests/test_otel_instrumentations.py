@@ -15,7 +15,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from nirikshaai._otel import _GENERAL_INSTRUMENTATIONS, _LLM_INSTRUMENTATIONS
+from nirikshaai._otel import (
+    _BUILTIN_LLM_INSTRUMENTORS,
+    _GENERAL_INSTRUMENTATIONS,
+    _LLM_INSTRUMENTATIONS,
+)
 
 PYPROJECT = Path(__file__).resolve().parent.parent / "pyproject.toml"
 
@@ -91,3 +95,51 @@ def test_llm_and_general_sets_are_disjoint() -> None:
 def test_llm_extra_is_not_empty() -> None:
     """A parser regression would make every other check here vacuously pass."""
     assert _extra("llm"), "the 'llm' extra must pin at least one instrumentor"
+
+
+# ── built-in instrumentors ────────────────────────────────────────────────────
+#
+# These need the opposite guarantees from the third-party ones: no pin (there is
+# no distribution to pin), but they must actually import, since a typo here is
+# not caught by pip.
+
+
+def test_builtin_instrumentors_live_in_this_package() -> None:
+    """A built-in entry pointing at a third-party module belongs in the other dict."""
+    for lib, module in _BUILTIN_LLM_INSTRUMENTORS.items():
+        assert module.startswith("nirikshaai.instrumentors."), (
+            f"{lib} maps to {module}, which is not a built-in instrumentor"
+        )
+
+
+def test_builtin_instrumentors_import_and_expose_an_instrumentor() -> None:
+    """The loader finds the class by name, so a rename would silently no-op.
+
+    _try_instrument scans for an attribute ending in "Instrumentor" and does
+    nothing if there is none — no error, no log. For a third-party package that
+    is the right behaviour (the library just is not installed); for our own code
+    it is a bug that would ship unnoticed.
+    """
+    import importlib
+
+    for lib, module_path in _BUILTIN_LLM_INSTRUMENTORS.items():
+        mod = importlib.import_module(module_path)
+        found = [attr for attr in dir(mod) if attr.endswith("Instrumentor")]
+        assert found, f"{lib} ({module_path}) exposes no *Instrumentor class"
+
+
+def test_builtin_instrumentors_do_not_duplicate_third_party_ones() -> None:
+    """Hand-maintaining an instrumentor that also exists upstream is pure cost."""
+    overlap = set(_BUILTIN_LLM_INSTRUMENTORS) & set(_LLM_INSTRUMENTATIONS)
+    assert not overlap, (
+        f"these frameworks are instrumented twice, built-in and third-party: {overlap}"
+    )
+
+
+def test_builtin_instrumentors_are_not_pinned_as_distributions() -> None:
+    """A built-in must not also appear in the extra — there is nothing to install."""
+    pinned = _distributions(_extra("llm"))
+    for lib, module in _BUILTIN_LLM_INSTRUMENTORS.items():
+        assert _module_to_distribution(module) not in pinned, (
+            f"{lib} is built in but also pinned in the 'llm' extra"
+        )

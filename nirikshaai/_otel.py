@@ -96,6 +96,21 @@ _LLM_INSTRUMENTATIONS: dict[str, str] = {
     "milvus": "opentelemetry.instrumentation.milvus",
 }
 
+# Instrumentors that ship inside this SDK, for frameworks with no published
+# instrumentor at all. Kept in a separate dict from _LLM_INSTRUMENTATIONS on
+# purpose: the pinning guard above exists because a third-party entry with no
+# matching pin is never installed, and a built-in has nothing to pin. Folding
+# these in would mean weakening the check that just caught three dead entries.
+#
+# Adding to this dict is a last resort — an upstream package is always cheaper to
+# maintain. See nirikshaai/instrumentors/__init__.py.
+_BUILTIN_LLM_INSTRUMENTORS: dict[str, str] = {
+    # LangGraph. The langchain instrumentor traces the LCEL calls underneath a
+    # graph but flattens its structure, so per-node timing, failures and loops
+    # are invisible. There is no opentelemetry-instrumentation-langgraph.
+    "langgraph": "nirikshaai.instrumentors.langgraph",
+}
+
 
 def _build_grpc_channel_credentials(
     *,
@@ -284,6 +299,7 @@ def _configure_otel(
     libs_to_instrument = dict(_GENERAL_INSTRUMENTATIONS)
     if enable_llm:
         libs_to_instrument.update(_LLM_INSTRUMENTATIONS)
+        libs_to_instrument.update(_BUILTIN_LLM_INSTRUMENTORS)
 
     for lib_name, module_path in libs_to_instrument.items():
         if lib_name in skip:

@@ -216,6 +216,7 @@ harmless.
 | `crewai` | Crew and agent task execution spans |
 | `haystack` | Pipeline and component spans |
 | `mcp` | MCP tool calls, server name and method |
+| `langgraph` | One span per graph node, correctly parented — node name, node kind, thread id ([details](#langgraph)) |
 
 **Vector stores** — these populate the RAG retrieval views (data source, document count, top score).
 
@@ -226,6 +227,72 @@ harmless.
 | `qdrant` | Search and upsert operations, collection name |
 | `weaviate` | Query operations, class name |
 | `milvus` | Search and insert operations, collection name |
+
+### LangGraph
+
+LangGraph is the one framework in the table above with **no published OpenTelemetry
+instrumentor**, so this SDK ships its own — `nirikshaai.instrumentors.langgraph`.
+Nothing extra to install: it is applied by `enable_llm=True` like the rest.
+
+The `langchain` instrumentor already traces the LLM calls *underneath* a graph, but
+it flattens the graph itself. You see the model calls and lose the structure, so you
+cannot tell which node was slow, which node failed, or that the agent went round the
+same node eleven times. This instrumentor emits one span per node execution:
+
+| Attribute | Value |
+|---|---|
+| span name | `langgraph.node.<node_name>` |
+| `gen_ai.agent.name` | the node's name |
+| `gen_ai.operation.name` | `execute_tool` for tool nodes, `invoke_agent` otherwise |
+| `gen_ai.tool.name` | the node name, on tool nodes only |
+| `gen_ai.conversation.id` | LangGraph's `configurable.thread_id`, when set |
+| `nirikshaai.instrumentor` | `langgraph` — marks the span's provenance |
+
+Spans nest according to actual execution, so a subgraph's nodes are children of the
+node that invoked them. Because the attribute names are the standard OTel GenAI ones,
+these spans populate the platform's agent views — including the **agent topology
+graph** and **loop detection** — with no extra configuration.
+
+```python
+import nirikshaai
+
+nirikshaai.init(
+    endpoint="https://api.nirikshaai.example.com",
+    api_key="nai_...",
+    service_name="support-agent",
+    enable_llm=True,
+)
+
+# Build and run your graph as usual — every node is traced.
+from langgraph.graph import StateGraph
+...
+graph.invoke({"question": "..."}, config={"configurable": {"thread_id": "user-42"}})
+```
+
+Notes and limits:
+
+- **Node naming.** LangGraph allows unnamed callables. A node whose name cannot be
+  determined is recorded as `unknown_node` rather than being dropped — the
+  parent/child edge is still worth having. Lambdas are treated as unnamed, since a
+  span called `<lambda>` would group unrelated nodes together.
+- **Tool detection is by convention.** Nodes named `tools`, `tool`, `tool_node` or
+  `ToolNode` — including LangGraph's prebuilt `ToolNode` — are recorded as tool
+  executions. Anything else is an orchestration step. A custom tool node under a
+  different name is traced, just classified as an agent step.
+- **Node inputs and outputs are not captured**, regardless of `capture_prompts`.
+  Graph state is arbitrary application data and frequently large; the prompt bodies
+  you want are already captured by the LLM-client instrumentor on the child span.
+- **Turning it off:** `disable_instrumentations=["langgraph"]`.
+- **Manual control**, if you would rather not enable every LLM instrumentor:
+
+  ```python
+  from nirikshaai.instrumentors import instrument_langgraph
+
+  inst = instrument_langgraph()   # patch
+  inst.uninstrument()             # restore, e.g. between tests
+  ```
+
+  `instrument()` is idempotent — calling it twice does not double-count nodes.
 
 ---
 
