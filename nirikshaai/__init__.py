@@ -94,9 +94,17 @@ from nirikshaai.span import (
     record_tool_call,
 )
 
+# After the span-helpers import: the package attribute `span` must be the
+# observe.span() function, not the nirikshaai.span submodule it shares a name with.
+from nirikshaai.observe import log, observe, span, start_span  # noqa: E402  # isort: skip
+
 __version__ = "0.0.1"  # keep in sync with pyproject.toml
 
 __all__ = [
+    "observe",
+    "span",
+    "start_span",
+    "log",
     "__version__",
     "init",
     "is_initialized",
