@@ -75,6 +75,34 @@ Your `api_key` is a project-scoped key (prefixed `nai_`). It encodes which org a
 
 ---
 
+## Wrap an Agent
+
+Three calls turn an agent into a **run** on LLM → Runs — live, with a timeline, token and tool counts, and the deterministic health findings (long running, repeated tool, repeated error, no activity, possible loop):
+
+```python
+from nirikshaai import init, observe, span, log
+
+init(endpoint="https://app.niriksha.ai", api_key="nai_...", service_name="research-agent")
+
+@observe("research-agent")                       # the root span becomes the run
+def run(question: str) -> str:
+    log("info", "agent started", {"question": question})
+    plan = span("plan", lambda: call_model(question), type="llm", model="gpt-4o")
+    docs = span("search", lambda: search(plan), type="tool")
+    return span("answer", lambda: call_model(docs), type="llm")
+```
+
+| Call | What it is | Attributes written |
+|---|---|---|
+| `observe(name, fn)` / `@observe` | the agent entry point; status becomes Succeeded / Failed | `gen_ai.operation.name=invoke_agent`, `gen_ai.agent.name`, `niriksha.run=true` |
+| `span(name, fn, type=…)` | one step: `llm`, `tool`, `agent` or `retrieval` | `gen_ai.operation.name` (`chat`, `execute_tool`, `invoke_agent`, `retrieval`), `gen_ai.tool.name`, `gen_ai.request.model` |
+| `with start_span(name, type=…) as sp:` | the block form of `span` | same |
+| `log(level, message, attrs)` | a structured line on the run | a span event, plus an OTel log record when `enable_logs=True` |
+
+Async functions are awaited; exceptions are recorded on the span and re-raised. These are plain OpenTelemetry GenAI semantic conventions, so the spans read in any OTel backend too. See `examples/agent-basic/agent.py` for a runnable agent that produces a finding on purpose.
+
+---
+
 ## LLM Applications
 
 Enable LLM instrumentation with the `enable_llm` flag. When set, the SDK automatically patches supported LLM client libraries so that every API call creates a standard OpenTelemetry span with token counts, model name, and (optionally) prompt/completion content.
